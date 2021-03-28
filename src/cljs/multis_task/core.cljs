@@ -16,7 +16,13 @@
   (re-frame/clear-subscription-cache!)
   (let [root-el (.getElementById js/document "app")]
     (rdom/unmount-component-at-node root-el)
-    (rdom/render [views/main-panel] root-el)))
+    (rdom/render [:div
+                  [views/main-panel]
+                  [views/loader]
+                  [views/loader-counter-inc-button]
+                  [views/loader-counter-dec-button]
+                  [views/request-accs-button]]
+                 root-el)))
 
 (defn init []
   (re-frame/dispatch-sync [::events/initialize-db])
