@@ -6,6 +6,9 @@
    :loader-counter 0
    })
 
+(s/def ::metamask-data (s/keys :req-un []
+                               :opt-un [::network-type ::chosen-account]))
+
 (s/def ::db-spec (s/keys :req-un [::loader-counter ::name]
-                         :opt-un []
+                         :opt-un [::metamask-data]
                          ))

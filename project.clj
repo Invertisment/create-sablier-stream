@@ -6,7 +6,8 @@
                                org.clojure/google-closure-library-third-party]]
                  [thheller/shadow-cljs "2.11.24"]
                  [reagent "1.0.0"]
-                 [re-frame "1.2.0"]]
+                 [re-frame "1.2.0"]
+                 [day8.re-frame/async-flow-fx "0.2.0"]]
 
   :plugins [[cider/cider-nrepl "0.25.6"]
             [lein-shadow "0.3.1"]

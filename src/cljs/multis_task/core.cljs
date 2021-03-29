@@ -19,8 +19,6 @@
     (rdom/render [:div
                   [views/main-panel]
                   [views/loader]
-                  [views/loader-counter-inc-button]
-                  [views/loader-counter-dec-button]
                   [views/request-accs-button]]
                  root-el)))
 

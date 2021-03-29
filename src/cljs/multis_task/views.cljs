@@ -16,16 +16,6 @@
        [:h3 "Loading: " (str loading)]]
       [:div])))
 
-(defn loader-counter-inc-button []
-  [:button
-   {:on-click #(re-frame/dispatch [::events/change-loader-counter +])}
-   "inc"])
-
-(defn loader-counter-dec-button []
-  [:button
-   {:on-click #(re-frame/dispatch [::events/change-loader-counter -])}
-   "dec"])
-
 (defn request-accs-button []
   [:button
    {:on-click #(re-frame/dispatch [::events/activate-metamask])}
