@@ -17,9 +17,8 @@
   (let [root-el (.getElementById js/document "app")]
     (rdom/unmount-component-at-node root-el)
     (rdom/render [:div
-                  [views/main-panel]
                   [views/loader]
-                  [views/request-accs-button]]
+                  [views/main-panel]]
                  root-el)))
 
 (defn init []
