@@ -13,17 +13,21 @@
  (fn [_ _]
    db/default-db))
 
+(defn change-loader-timer [db op]
+  (update db :loader-counter op 1))
+#_(change-loader-timer {:loader-counter 0} +)
+
 (re-frame/reg-event-db
  ::increase-loader-counter
  interceptors
  (fn [db [_]]
-   (update db :loader-counter #(+ (or % 0) 1))))
+   (change-loader-timer db +)))
 
 (re-frame/reg-event-db
  ::decrease-loader-counter
  interceptors
  (fn [db [_]]
-   (update db :loader-counter #(- (or % 0) 1))))
+   (change-loader-timer db -)))
 
 (re-frame/reg-event-db
  :notify-error
@@ -31,9 +35,16 @@
  (fn [_ [_ error]]
    (println "[DISPLAY USER ERROR]" error)))
 
+(re-frame/reg-event-db
+ ::navigate
+ interceptors
+ (fn [db [_ to-route]]
+   (assoc db :route to-route)))
+
 (re-frame/reg-event-fx
  ::activate-metamask
  interceptors
- (fn [cofx]
-   {:async-flow (metamask/set-up-metamask-flow {:on-finally [::decrease-loader-counter]})
+ (fn [{:keys [db] :as cofx}]
+   {:async-flow (metamask/set-up-metamask-flow {:on-finally [::decrease-loader-counter]
+                                                :on-success [::navigate :connected-menu]})
     :dispatch [::increase-loader-counter]}))

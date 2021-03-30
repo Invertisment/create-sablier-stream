@@ -3,11 +3,6 @@
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
- ::name
- (fn [db]
-   (:name db)))
-
-(re-frame/reg-sub
  ::loader-counter
  (fn [db]
    (:loader-counter db)))
@@ -39,3 +34,8 @@
  (fn [[metamask-data] query-v]
    (when (:initialized metamask-data)
      (get metamask-data :chosen-account "unknown"))))
+
+(re-frame/reg-sub
+ ::route
+ (fn [db]
+   (:route db)))
