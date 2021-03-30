@@ -18,3 +18,24 @@
    [(re-frame/subscribe [::loader-counter])])
  (fn [[loader-counter] query-v]
    (> loader-counter 0)))
+
+(re-frame/reg-sub
+ ::metamask-data
+ (fn [db query-v]
+   (get db :metamask-data)))
+
+(re-frame/reg-sub
+ ::chosen-network-name
+ (fn [query-v]
+   [(re-frame/subscribe [::metamask-data])])
+ (fn [[metamask-data] query-v]
+   (when metamask-data
+     (get metamask-data :network-name "unknown"))))
+
+(re-frame/reg-sub
+ ::chosen-acc-addr
+ (fn [query-v]
+   [(re-frame/subscribe [::metamask-data])])
+ (fn [[metamask-data] query-v]
+   (when metamask-data
+     (get metamask-data :chosen-account "unknown"))))

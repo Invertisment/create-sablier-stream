@@ -72,6 +72,6 @@
 
    :prod {}
 
-   }
+}
 
   :prep-tasks [])

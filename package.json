@@ -1,11 +1,13 @@
 {
 	"name": "multis-task",
-	"devDependencies": {
-		"shadow-cljs": "2.11.24"
-	},
 	"dependencies": {
+		"bufferutil": "4.0.3",
+		"ethers": "5.0.32",
 		"react": "17.0.1",
 		"react-dom": "17.0.1",
-		"web3-eth": "^1.3.4"
+		"utf-8-validate": "5.0.4"
+	},
+	"devDependencies": {
+		"shadow-cljs": "2.11.24"
 	}
 }

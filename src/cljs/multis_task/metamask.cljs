@@ -1,35 +1,50 @@
 (ns multis-task.metamask
   (:require
    [re-frame.core :as re-frame]
-   ["web3-eth" :as eth]
    [multis-task.util.async :as async-util]
    [day8.re-frame.async-flow-fx :as async-flow-fx]
-   [multis-task.interceptors :refer [interceptors]]))
+   [multis-task.interceptors :refer [interceptors]]
+   [ethers :as eth]))
 
 ;; ----- Coeffects -----
 
+;;const provider = new ethers.providers.Web3Provider(.-ethereum window)
+
 (re-frame/reg-cofx
- ::web3-eth
+ ::ethers-provider
  (fn [cofx _]
-   (if-let [provider eth/givenProvider]
-     (assoc cofx
-            ::web3-eth (eth. provider))
-     cofx)))
+   (let [constructor (some-> ethers
+                             (aget "providers")
+                             (aget "Web3Provider"))
+         eth-instance (.-ethereum js/window)]
+     (if (and constructor eth-instance)
+       (assoc cofx
+              ::ethers-provider (constructor. eth-instance))
+       cofx))))
 
 ;; ----- EFfects -----
 
 (re-frame/reg-fx
- ::retrieve-account-info
- (fn [[web3-eth promise-args]]
+ ::activate-metamask
+ (fn [promise-args]
    (async-util/promise->dispatch
-    (.requestAccounts web3-eth)
+    ;; NOTE: The console says that (.enable ethereum) deprecated.
+    ;; But it's what people do and it doesn't work without it.
+    (.enable (.-ethereum js/window))
     promise-args)))
 
 (re-frame/reg-fx
- ::get-network-type
- (fn [[web3-eth promise-args]]
+ ::retrieve-account-info
+ (fn [[eth-provider promise-args]]
    (async-util/promise->dispatch
-    (.getNetworkType (.-net web3-eth))
+    (.listAccounts eth-provider)
+    promise-args)))
+
+(re-frame/reg-fx
+ ::get-network-name
+ (fn [[eth-provider promise-args]]
+   (async-util/promise->dispatch
+    (.getNetwork eth-provider)
     promise-args)))
 
 ;; ----- EVents -----
@@ -39,34 +54,51 @@
  interceptors
  (fn [db [_ accounts]]
    (if accounts
-     (assoc-in db [:metamask-data :accounts] (first accounts))
+     (assoc-in db [:metamask-data :chosen-account] (first accounts))
      db)))
 
 (re-frame/reg-event-db
- ::get-network-type-success
+ ::get-network-name-success
  interceptors
- (fn [db [_ net-type]]
-   (if net-type
-     (assoc-in db [:metamask-data :network-type] net-type)
+ (fn [db [_ ethjs-network]]
+   (if-let [net-name (ethjs-network "name")]
+     (assoc-in db [:metamask-data :network-name] net-name)
      db)))
+
+(re-frame/reg-event-db
+ ::metamask-access-granted
+ interceptors
+ (fn [db _]
+   db))
+
+(re-frame/reg-event-fx
+ ::request-metamask-access
+ interceptors
+ (fn [cofx _]
+   {::activate-metamask
+    {:on-success [::metamask-access-granted]
+     :on-fail [:notify-error "Can't activate Metamask"]}}))
 
 (re-frame/reg-event-fx
  ::gather-session-info
- [(re-frame/inject-cofx ::web3-eth)]
+ (cons (re-frame/inject-cofx ::ethers-provider) interceptors)
  (fn [cofx _]
-   {::retrieve-account-info [(::web3-eth cofx)
+   {::retrieve-account-info [(::ethers-provider cofx)
                              {:on-success [::account-info-retrieved]
                               :on-fail [:notify-error "Can't retrieve account info from Metamask"]}]
-    ::get-network-type [(::web3-eth cofx)
-                        {:on-success [::get-network-type-success]
+    ::get-network-name [(::ethers-provider cofx)
+                        {:on-success [::get-network-name-success]
                          :on-fail [:notify-error "Can't get network info from Metamask"]}]}))
 
 ;; ----- Pipelines -----
 
 (defn set-up-metamask-flow [{:keys [on-success on-fail on-finally]}]
-  {:first-dispatch [::gather-session-info]
-   :rules [{:when :seen-all-of?
-            :events [::account-info-retrieved ::get-network-type-success]
+  {:first-dispatch [::request-metamask-access]
+   :rules [{:when :seen?
+            :events ::metamask-access-granted
+            :dispatch [::gather-session-info]}
+           {:when :seen-all-of?
+            :events [::account-info-retrieved ::get-network-name-success]
             :dispatch-n (vec (remove nil? [on-success on-finally]))
             :halt true}
            {:when :seen-any-of?
