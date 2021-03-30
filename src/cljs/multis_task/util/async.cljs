@@ -8,3 +8,8 @@
     on-fail (.catch (fn [e]
                       (re-frame/dispatch (concat on-fail [e]))))
     on-finally (.finally #(re-frame/dispatch on-finally))))
+
+(defn eth-event->dispatch [eth-event-type dispatch-event]
+  (.on (.-ethereum js/window)
+       eth-event-type
+       #(re-frame/dispatch (vec (concat dispatch-event [(js->clj %)])))))

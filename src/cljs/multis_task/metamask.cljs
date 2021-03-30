@@ -4,11 +4,10 @@
    [multis-task.util.async :as async-util]
    [day8.re-frame.async-flow-fx :as async-flow-fx]
    [multis-task.interceptors :refer [interceptors]]
-   [ethers :as eth]))
+   [ethers :as eth]
+   [multis-task.db :as db]))
 
 ;; ----- Coeffects -----
-
-;;const provider = new ethers.providers.Web3Provider(.-ethereum window)
 
 (re-frame/reg-cofx
  ::ethers-provider
@@ -25,19 +24,25 @@
 ;; ----- EFfects -----
 
 (re-frame/reg-fx
- ::activate-metamask
- (fn [promise-args]
-   (async-util/promise->dispatch
-    ;; NOTE: The console says that (.enable ethereum) deprecated.
-    ;; But it's what people do and it doesn't work without it.
-    (.enable (.-ethereum js/window))
-    promise-args)))
+ ::add-accounts-changed-callback
+ (fn [on-accounts-changed]
+   (async-util/eth-event->dispatch "accountsChanged" on-accounts-changed)))
+
+(re-frame/reg-fx
+ ::add-chain-changed-callback
+ (fn [on-chain-changed]
+   (async-util/eth-event->dispatch "chainChanged" on-chain-changed)))
+
+(re-frame/reg-fx
+ ::add-chain-disconnected-callback
+ (fn [on-chain-dcd]
+   (async-util/eth-event->dispatch "disconnect" on-chain-dcd)))
 
 (re-frame/reg-fx
  ::retrieve-account-info
- (fn [[eth-provider promise-args]]
+ (fn [promise-args]
    (async-util/promise->dispatch
-    (.listAccounts eth-provider)
+    (.request js/ethereum (clj->js {:method "eth_requestAccounts"}))
     promise-args)))
 
 (re-frame/reg-fx
@@ -47,6 +52,11 @@
     (.getNetwork eth-provider)
     promise-args)))
 
+(defn set-up-get-network-name-effect [ethers-provider]
+  [ethers-provider
+   {:on-success [::network-name-retrieved]
+    :on-fail [:notify-error "Can't get network info from Metamask"]}])
+
 ;; ----- EVents -----
 
 (re-frame/reg-event-db
@@ -55,53 +65,62 @@
  (fn [db [_ accounts]]
    (if accounts
      (assoc-in db [:metamask-data :chosen-account] (first accounts))
-     db)))
+     (assoc db :metamask-data db/default-metamask-data-state))))
+
+(re-frame/reg-event-fx
+ ::chain-changed
+ (cons (re-frame/inject-cofx ::ethers-provider) interceptors)
+ (fn [cofx _]
+   {::get-network-name (set-up-get-network-name-effect (::ethers-provider cofx))}))
+
+(re-frame/reg-event-fx
+ ::chain-disconnected
+ interceptors
+ (fn [{:keys [db] :as cofx} _]
+   {:db (assoc db :metamask-data db/default-metamask-data-state)
+    :dispatch [:notify-error "Chain disconnected. You may need to reload the page."]}))
 
 (re-frame/reg-event-db
- ::get-network-name-success
+ ::network-name-retrieved
  interceptors
  (fn [db [_ ethjs-network]]
    (if-let [net-name (ethjs-network "name")]
      (assoc-in db [:metamask-data :network-name] net-name)
      db)))
 
-(re-frame/reg-event-db
- ::metamask-access-granted
- interceptors
- (fn [db _]
-   db))
-
 (re-frame/reg-event-fx
- ::request-metamask-access
- interceptors
- (fn [cofx _]
-   {::activate-metamask
-    {:on-success [::metamask-access-granted]
-     :on-fail [:notify-error "Can't activate Metamask"]}}))
+ ::init
+ (cons (re-frame/inject-cofx ::ethers-provider) interceptors)
+ (fn [{:keys [db] :as cofx} _]
+   (if (get-in db [:metamask-data :initialized])
+     {:dispatch [::async-flow-fx/notify ::init-skipped]}
+     {::add-accounts-changed-callback [::account-info-retrieved]
+      ::add-chain-changed-callback [::chain-changed]
+      ::add-chain-disconnected-callback [::chain-disconnected]
+      :db (assoc-in db [:metamask-data :initialized] true)
+      :dispatch [::async-flow-fx/notify ::init-done]})))
 
 (re-frame/reg-event-fx
  ::gather-session-info
  (cons (re-frame/inject-cofx ::ethers-provider) interceptors)
  (fn [cofx _]
-   {::retrieve-account-info [(::ethers-provider cofx)
-                             {:on-success [::account-info-retrieved]
-                              :on-fail [:notify-error "Can't retrieve account info from Metamask"]}]
-    ::get-network-name [(::ethers-provider cofx)
-                        {:on-success [::get-network-name-success]
-                         :on-fail [:notify-error "Can't get network info from Metamask"]}]}))
+   {::retrieve-account-info {:on-success [::account-info-retrieved]
+                             :on-fail [:notify-error "Can't retrieve account info from Metamask"]}
+    ::get-network-name (set-up-get-network-name-effect (::ethers-provider cofx))}))
 
 ;; ----- Pipelines -----
 
 (defn set-up-metamask-flow [{:keys [on-success on-fail on-finally]}]
-  {:first-dispatch [::request-metamask-access]
-   :rules [{:when :seen?
-            :events ::metamask-access-granted
+  {:first-dispatch [::init]
+   :rules [{:when :seen-any-of?
+            :events [[::async-flow-fx/notify ::init-done]
+                     [::async-flow-fx/notify ::init-skipped]]
             :dispatch [::gather-session-info]}
            {:when :seen-all-of?
-            :events [::account-info-retrieved ::get-network-name-success]
-            :dispatch-n (vec (remove nil? [on-success on-finally]))
+            :events [::account-info-retrieved ::network-name-retrieved]
+            :dispatch-n (remove nil? [on-success on-finally])
             :halt true}
            {:when :seen-any-of?
             :events :notify-error
-            :dispatch-n (vec (remove nil? [on-fail on-finally]))
+            :dispatch-n (remove nil? [on-fail on-finally])
             :halt? true}]})

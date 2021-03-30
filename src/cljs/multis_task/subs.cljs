@@ -29,7 +29,7 @@
  (fn [query-v]
    [(re-frame/subscribe [::metamask-data])])
  (fn [[metamask-data] query-v]
-   (when metamask-data
+   (when (:initialized metamask-data)
      (get metamask-data :network-name "unknown"))))
 
 (re-frame/reg-sub
@@ -37,5 +37,5 @@
  (fn [query-v]
    [(re-frame/subscribe [::metamask-data])])
  (fn [[metamask-data] query-v]
-   (when metamask-data
+   (when (:initialized metamask-data)
      (get metamask-data :chosen-account "unknown"))))
