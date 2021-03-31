@@ -2,7 +2,8 @@
   (:require
    [re-frame.core :as re-frame]
    [multis-task.subs :as subs]
-   [multis-task.events :as events]))
+   [multis-task.events :as events]
+   [multis-task.metamask :as metamask]))
 
 (defn loader []
   (let [loading @(re-frame/subscribe [::subs/loading])]
@@ -54,7 +55,7 @@
     (case route
       :home (page
              "ERC20 streaming"
-             (dispatch-button "Connect Metamask" [::events/activate-metamask]))
+             (dispatch-button "Connect Metamask" [::metamask/activate-metamask]))
       :connected-menu (metamask-page
                        "Choose your action"
                        (to :initiate-token-stream "Create token stream"))

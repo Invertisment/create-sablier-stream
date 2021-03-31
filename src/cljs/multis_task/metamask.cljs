@@ -5,7 +5,8 @@
    [day8.re-frame.async-flow-fx :as async-flow-fx]
    [multis-task.interceptors :refer [interceptors]]
    [ethers :as eth]
-   [multis-task.db :as db]))
+   [multis-task.db :as db]
+   [multis-task.events :as events]))
 
 ;; ----- Coeffects -----
 
@@ -124,3 +125,11 @@
             :events :notify-error
             :dispatch-n (remove nil? [on-fail on-finally])
             :halt? true}]})
+
+(re-frame/reg-event-fx
+ ::activate-metamask
+ interceptors
+ (fn [{:keys [db] :as cofx}]
+   {:async-flow (set-up-metamask-flow {:on-finally [::events/decrease-loader-counter]
+                                       :on-success [::events/navigate :connected-menu]})
+    :dispatch [::events/increase-loader-counter]}))

@@ -3,8 +3,6 @@
    [re-frame.core :as re-frame]
    [multis-task.db :as db]
    [multis-task.config :as config]
-   [multis-task.metamask :as metamask]
-   [day8.re-frame.async-flow-fx :as async-flow-fx]
    [multis-task.interceptors :refer [interceptors]]))
 
 (re-frame/reg-event-db
@@ -40,11 +38,3 @@
  interceptors
  (fn [db [_ to-route]]
    (assoc db :route to-route)))
-
-(re-frame/reg-event-fx
- ::activate-metamask
- interceptors
- (fn [{:keys [db] :as cofx}]
-   {:async-flow (metamask/set-up-metamask-flow {:on-finally [::decrease-loader-counter]
-                                                :on-success [::navigate :connected-menu]})
-    :dispatch [::increase-loader-counter]}))
