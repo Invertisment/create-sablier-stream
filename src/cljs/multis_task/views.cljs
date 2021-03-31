@@ -29,7 +29,7 @@
      [:p "Account: " acc-addr]]
     [:div]))
 
-(defn link-btn [btn-name to-route]
+(defn to [to-route btn-name]
   [:button
    {:on-click #(re-frame/dispatch [::events/navigate to-route])}
    btn-name])
@@ -57,10 +57,10 @@
              (dispatch-button "Connect Metamask" [::events/activate-metamask]))
       :connected-menu (metamask-page
                        "Choose your action"
-                       (link-btn "Create token stream" :initiate-token-stream))
+                       (to :initiate-token-stream "Create token stream"))
       :initiate-token-stream (metamask-page
                               "Create token stream"
-                              (link-btn "Go to Home" :home))
+                              (to :home "Go to Home"))
       [:div
        [:h1 "Not found"]
-       [link-btn "Return to start" :home]])))
+       [to :home "Return to start"]])))
