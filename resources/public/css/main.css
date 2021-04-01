@@ -14,3 +14,14 @@
     justify-content: center;
     height: 100%;
 }
+
+.space-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.error {
+    background: #ff000044;
+    padding: 2px;
+}

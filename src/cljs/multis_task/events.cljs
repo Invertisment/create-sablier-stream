@@ -30,8 +30,28 @@
 (re-frame/reg-event-fx
  :notify-error
  interceptors
- (fn [_ [_ error]]
-   (println "[DISPLAY USER ERROR]" error)))
+ (fn [{:keys [db] :as cofx} [_ error]]
+   {:db (update db :ui-errors
+                (fn [errors]
+                  (conj
+                   (remove #(= % error) errors)
+                   error)))
+    ::clear-error-later error}))
+
+(re-frame/reg-event-db
+ :clear-error
+ interceptors
+ (fn [db [_ error]]
+   (update db :ui-errors
+           (fn [errors]
+             (remove #(= % error) errors)))))
+
+(re-frame/reg-fx
+ ::clear-error-later
+ (fn [error]
+   (js/setTimeout
+    #(re-frame/dispatch [:clear-error error])
+    3000)))
 
 (re-frame/reg-event-db
  ::navigate

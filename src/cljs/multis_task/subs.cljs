@@ -39,3 +39,8 @@
  ::route
  (fn [db]
    (:route db)))
+
+(re-frame/reg-sub
+ ::ui-errors
+ (fn [db]
+   (:ui-errors db)))

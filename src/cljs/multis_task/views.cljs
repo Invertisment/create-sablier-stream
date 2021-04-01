@@ -36,6 +36,14 @@
    {:on-click #(re-frame/dispatch [::events/navigate to-route])}
    btn-name])
 
+(defn ui-errors [to-route btn-name]
+  (when-let [errors (seq @(re-frame/subscribe [::subs/ui-errors]))]
+    [:div
+     (map
+      (fn [error]
+        ^{:key error} [:div.space-between.error error (dispatch-button "Clear" [:clear-error error])])
+      errors)]))
+
 (defn metamask-info []
   [:div
    [chosen-network-name]
@@ -43,6 +51,7 @@
 
 (defn page [title & body]
   [:div
+   [ui-errors]
    [:h1 title]
    (vec (cons :div body))])
 #_(page "hi" :1 :2 :3)
