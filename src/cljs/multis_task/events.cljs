@@ -11,21 +11,26 @@
  (fn [_ _]
    db/default-db))
 
-(defn change-loader-timer [db op]
-  (update db :loader-counter op 1))
-#_(change-loader-timer {:loader-counter 0} +)
+(defn change-loader-timer-fx [{:keys [db] :as cofx} op & further-dispatch]
+  (if further-dispatch
+    {:db (update db :loader-counter op 1)
+     :dispatch (reduce conj further-dispatch)}
+    {:db (update db :loader-counter op 1)}))
+#_(change-loader-timer-fx {:db {:loader-counter 0}} + [:println] :hello)
+#_(change-loader-timer-fx {:db {:loader-counter nil}} + [:println] :hello)
+#_(change-loader-timer-fx {:db {:loader-counter nil}} +)
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::increase-loader-counter
  interceptors
- (fn [db [_]]
-   (change-loader-timer db +)))
+ (fn [cofx [_ & further-dispatch]]
+   (apply change-loader-timer-fx cofx + further-dispatch)))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::decrease-loader-counter
  interceptors
- (fn [db [_]]
-   (change-loader-timer db -)))
+ (fn [cofx [_ & further-dispatch]]
+   (apply change-loader-timer-fx cofx - further-dispatch)))
 
 (re-frame/reg-event-fx
  :notify-error
@@ -51,7 +56,7 @@
  (fn [error]
    (js/setTimeout
     #(re-frame/dispatch [:clear-error error])
-    3000)))
+    7001)))
 
 (re-frame/reg-event-db
  ::navigate

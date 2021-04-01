@@ -1,4 +1,12 @@
 
+body {
+    max-width: 50em;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 2%;
+    padding-right: 2%;
+}
+
 .portal-container {
     position: absolute;
     width: 100%;
@@ -18,10 +26,30 @@
 .space-between {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: baseline;
 }
 
 .error {
     background: #ff000044;
     padding: 2px;
+}
+
+.input {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.input > :nth-child(2) {
+    margin-left: 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.input > input {
+    text-align: right;
+    width: 400px;
 }

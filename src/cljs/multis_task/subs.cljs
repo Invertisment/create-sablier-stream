@@ -44,3 +44,18 @@
  ::ui-errors
  (fn [db]
    (:ui-errors db)))
+
+(re-frame/reg-sub
+ ::erc20-token-name-input
+ (fn [db]
+   (get-in db [:token-stream-form :erc20-token-input :name] "Input your ERC20 address")))
+
+(re-frame/reg-sub
+ ::erc20-token-addr-input
+ (fn [db]
+   (get-in db [:token-stream-form :erc20-token-input :addr])))
+
+(re-frame/reg-sub
+ ::authorize-sablier-visible
+ (fn [db]
+   (boolean (get-in db [:token-stream-form :erc20-token-input :name]))))
