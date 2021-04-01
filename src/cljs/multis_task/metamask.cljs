@@ -10,17 +10,20 @@
 
 ;; ----- Coeffects -----
 
+(defn mk-ethers-provider! []
+  (let [constructor (some-> ethers
+                            (aget "providers")
+                            (aget "Web3Provider"))
+        eth-instance (.-ethereum js/window)]
+    (when (and constructor eth-instance)
+      (constructor. eth-instance))))
+
 (re-frame/reg-cofx
  ::ethers-provider
  (fn [cofx _]
-   (let [constructor (some-> ethers
-                             (aget "providers")
-                             (aget "Web3Provider"))
-         eth-instance (.-ethereum js/window)]
-     (if (and constructor eth-instance)
-       (assoc cofx
-              ::ethers-provider (constructor. eth-instance))
-       cofx))))
+   (if-let [provider (mk-ethers-provider!)]
+     (assoc cofx ::ethers-provider provider)
+     cofx)))
 
 ;; ----- EFfects -----
 
@@ -111,7 +114,7 @@
 
 ;; ----- Pipelines -----
 
-(defn set-up-metamask-flow [{:keys [on-success on-fail on-finally]}]
+(defn set-up-flow [{:keys [on-success on-fail on-finally]}]
   {:first-dispatch [::init]
    :rules [{:when :seen-any-of?
             :events [[::async-flow-fx/notify ::init-done]
@@ -130,6 +133,6 @@
  ::activate-metamask
  interceptors
  (fn [{:keys [db] :as cofx}]
-   {:async-flow (set-up-metamask-flow {:on-finally [::events/decrease-loader-counter]
-                                       :on-success [::events/navigate :connected-menu]})
+   {:async-flow (set-up-flow {:on-finally [::events/decrease-loader-counter]
+                              :on-success [::events/navigate :connected-menu]})
     :dispatch [::events/increase-loader-counter]}))

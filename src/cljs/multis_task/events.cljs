@@ -27,7 +27,7 @@
  (fn [db [_]]
    (change-loader-timer db -)))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  :notify-error
  interceptors
  (fn [_ [_ error]]
@@ -38,3 +38,23 @@
  interceptors
  (fn [db [_ to-route]]
    (assoc db :route to-route)))
+
+(re-frame/reg-event-fx
+ :println
+ (fn [_ [_ & data]]
+   (apply println data)))
+
+(re-frame/reg-event-fx
+ :console-log
+ (fn [_ [_ & data]]
+   (apply (.-log js/console) data)))
+
+(re-frame/reg-event-fx
+ :clj->js
+ (fn [_ [_ notify-callback data]]
+   {:dispatch (conj notify-callback (clj->js data))}))
+
+(re-frame/reg-event-fx
+ :js->clj
+ (fn [_ [_ notify-callback data]]
+   {:dispatch (conj notify-callback (js->clj data))}))

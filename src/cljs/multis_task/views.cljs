@@ -3,7 +3,8 @@
    [re-frame.core :as re-frame]
    [multis-task.subs :as subs]
    [multis-task.events :as events]
-   [multis-task.metamask :as metamask]))
+   [multis-task.metamask :as metamask]
+   [multis-task.contracts :as contracts]))
 
 (defn loader []
   (let [loading @(re-frame/subscribe [::subs/loading])]
@@ -61,6 +62,9 @@
                        (to :initiate-token-stream "Create token stream"))
       :initiate-token-stream (metamask-page
                               "Create token stream"
+                              (dispatch-button "Fetch Sablier ABI" [::contracts/fetch-abi :sablier [:console-log] [:notify-error]])
+                              (dispatch-button "Fetch erc20 ABI" [::contracts/fetch-abi :erc20 [:console-log] [:notify-error]])
+                              (dispatch-button "Fetch bruh ABI" [::contracts/fetch-abi :bruh [:console-log] [:notify-error]])
                               (to :home "Go to Home"))
       [:div
        [:h1 "Not found"]
