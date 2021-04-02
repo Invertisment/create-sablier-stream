@@ -34,6 +34,12 @@ body {
     padding: 2px;
 }
 
+.field-error {
+    background: #ff000044;
+    padding: 2px;
+    text-align: end;
+}
+
 .input {
     display: flex;
     justify-content: space-between;
@@ -47,6 +53,7 @@ body {
     margin-left: 20px;
     display: flex;
     justify-content: flex-end;
+    line-height: 32px;
 }
 
 .input > input {

@@ -59,25 +59,21 @@
  ::call-method
  call-read-only-method-fx)
 
-(re-frame/reg-event-db
- ::fetch-erc20-name-success
- (fn [db [_ token-addr dispatch-callback token-name]]
-   (assoc-in db [:token-stream-form :erc20-token-input]
-             {:name token-name
-              :addr token-addr})))
-
 (re-frame/reg-event-fx
- ::fetch-erc20-name-clear
- (fn [{:keys [db] :as cofx} [_ dispatch-callback error-reason]]
-   {:db (update db :token-stream-form dissoc :erc20-token-input)
-    :dispatch (conj dispatch-callback error-reason)}))
+ ::fetch-erc20-name-success
+ (fn [{:keys [db]} [_ token-addr success-callback token-name]]
+   (let [new-db (assoc-in db [:token-stream-form :erc20-token-input :name] token-name)]
+     (if success-callback
+       {:db new-db
+        :dispatch success-callback}
+       {:db new-db}))))
 
 (re-frame/reg-event-fx
  ::fetch-erc20-name
- (fn [cofx [_ token-addr]]
+ (fn [cofx [_ token-addr on-success on-fail]]
    {::call-method [token-addr
                    erc-20-abi
                    (.getSigner (multis-task.metamask/mk-ethers-provider!))
                    ["name"]
-                   [::fetch-erc20-name-success token-addr [:println]]
-                   [::fetch-erc20-name-clear [:notify-error]]]}))
+                   [::fetch-erc20-name-success token-addr (conj on-success token-addr)]
+                   on-fail]}))

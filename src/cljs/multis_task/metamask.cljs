@@ -132,7 +132,7 @@
 (re-frame/reg-event-fx
  ::activate-metamask
  interceptors
- (fn [{:keys [db] :as cofx}]
+ (fn [{:keys [db] :as cofx} [_ on-success]]
    {:async-flow (set-up-flow {:on-finally [::events/decrease-loader-counter]
-                              :on-success [::events/navigate :connected-menu]})
+                              :on-success on-success})
     :dispatch [::events/increase-loader-counter]}))

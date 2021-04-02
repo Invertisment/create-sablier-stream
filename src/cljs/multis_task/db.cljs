@@ -9,19 +9,22 @@
    :metamask-data default-metamask-data-state
    :route default-route-state
    :ui-errors []
+   :field-errors {}
    :token-stream-form {}
    })
 
 (s/def ::initialized boolean?)
 
-(s/def ::route #{:home :connected-menu :initiate-token-stream})
+(s/def ::route #{:home :initiate-token-stream})
 
 (s/def ::metamask-data (s/keys :req-un [::initialized]
                                :opt-un [::network-name ::chosen-account]))
 
 (s/def ::erc20-token-input (s/keys :req-un [::name ::addr]))
 
-(s/def ::token-stream-form (s/keys :opt-un [::erc20-token-input]))
+(s/def ::token-stream-form (s/keys :opt-un [::erc20-token-input ::date-from ::time-from]))
 
-(s/def ::db-spec (s/keys :req-un [::loader-counter ::metamask-data ::route ::ui-errors ::token-stream-form]
+(s/def ::field-errors (s/keys :opt-un [::erc20-token-addr-input]))
+
+(s/def ::db-spec (s/keys :req-un [::loader-counter ::metamask-data ::route ::ui-errors ::token-stream-form ::field-errors]
                          :opt-un []))
