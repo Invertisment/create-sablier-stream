@@ -15,7 +15,7 @@
 
 (defn required [data]
   (when (empty? data)
-    "This field is required"))
+    "This field is required."))
 
 (defn pos-str? [number-str]
   (try
@@ -30,3 +30,21 @@
     :pos? pos-str?
     :required required
     ))
+
+(defn date-time-after-now? [date-str time-str]
+  (when (and date-str time-str)
+    (let [input (js/Date. (str date-str " " time-str))
+          now (js/Date.)]
+      (when (> now input)
+        "Expected future Date and Time."))))
+
+(defn hours-multiple-of? [hours number]
+  (let [seconds (* hours 60)
+        residue (mod seconds number)]
+    (when (not= residue 0)
+      (str hours " hours (" seconds " in seconds) must be a multiple of " number "."))))
+
+(defn to-multi-field-validation-fn [key]
+  (case key
+    :date-time-after-now? date-time-after-now?
+    :hours-multiple-of? hours-multiple-of?))

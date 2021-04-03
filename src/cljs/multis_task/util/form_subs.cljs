@@ -25,3 +25,8 @@
  ::field-error_token-stream-form_amount
  (fn [db]
    (get-in db [:field-errors :token-stream-form :amount])))
+
+(re-frame/reg-sub
+ ::field-error_token-stream-form_multiple-validation
+ (fn [db]
+   (get-in db [:field-errors :token-stream-form :multiple-validation])))

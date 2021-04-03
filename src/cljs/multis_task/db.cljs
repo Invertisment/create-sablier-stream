@@ -11,6 +11,7 @@
    :ui-errors []
    :field-errors {}
    :token-stream-form {}
+   :form-invalidation {}
    })
 
 (s/def ::initialized boolean?)
@@ -26,5 +27,7 @@
 
 (s/def ::field-errors (s/keys :opt-un [::erc20-token-addr-input ::token-stream-form]))
 
-(s/def ::db-spec (s/keys :req-un [::loader-counter ::metamask-data ::route ::ui-errors ::field-errors]
+(s/def ::form-invalidation (s/keys :opt-un []))
+
+(s/def ::db-spec (s/keys :req-un [::loader-counter ::metamask-data ::route ::ui-errors ::field-errors ::form-invalidation]
                          :opt-un []))
