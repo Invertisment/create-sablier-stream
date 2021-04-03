@@ -15,6 +15,11 @@
       (aget "value")))
 
 (defn mk-on-change-dispatch-fn! [{:keys [form-id field-path] :as on-change-dispatch-input}]
+  (when (and (:revalidate-field-on-change on-change-dispatch-input)
+             (:multi-validation-fn on-change-dispatch-input))
+    (throw (ex-info "Invalid field specification.
+Existence of :revalidate-field-on-change and :multi-validation-fn on a single field will result in unending event cycle."
+                    (clj->js on-change-dispatch-input))))
   (let [validate-field-input (form-events/to-validate-field-input
                               on-change-dispatch-input)]
     (re-frame/dispatch (form-events/mk-put-field-invalidation-event
@@ -49,5 +54,6 @@
                       field-description
                       [:form-id :field-path :validation-fns
                        :multi-validation-field-paths
-                       :multi-validation-fn])))}])
+                       :multi-validation-fn
+                       :revalidate-field-on-change])))}])
      (field-error form-id mandatory-error-path)]))

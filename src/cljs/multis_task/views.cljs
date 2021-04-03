@@ -61,7 +61,8 @@
                             :type "date"
                             :form-id :token-stream-form
                             :field-path [:date-from]
-                            :validation-fns [:required :date-at-least-today?]})
+                            :validation-fns [:required :date-at-least-today?]
+                            :revalidate-field-on-change [:time-from]})
       (form/field-with-err {:label "Desired stream start time"
                             :type "time"
                             :form-id :token-stream-form
@@ -73,7 +74,8 @@
                             :type "number"
                             :form-id :token-stream-form
                             :field-path [:duration]
-                            :validation-fns [:required :pos?]})
+                            :validation-fns [:required :pos?]
+                            :revalidate-field-on-change [:amount]})
       (form/field-with-err {:label "Amount"
                             :type "number"
                             :form-id :token-stream-form

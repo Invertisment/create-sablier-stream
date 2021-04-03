@@ -17,10 +17,10 @@
 (re-frame/reg-event-db
  ::on-field-error
  interceptors
- (fn [db [_ form-id error-path field-path error]]
+ (fn [db [_ form-id error-path field-path value error]]
    (-> db
        (assoc-in (to-db-error-path form-id error-path) error)
-       (remove-value-from-db form-id field-path))))
+       (assoc-in (full-db-path form-id field-path) value))))
 
 (re-frame/reg-event-db
  ::on-field-ok
@@ -31,13 +31,14 @@
        (assoc-in db-err-removed (full-db-path form-id field-path) value)
        (remove-value-from-db db-err-removed form-id field-path)))))
 
-(defn to-validate-field-input [{:keys [form-id field-path error-path validation-fns multi-validation-field-paths multi-validation-fn]}]
+(defn to-validate-field-input [{:keys [form-id field-path error-path validation-fns multi-validation-field-paths multi-validation-fn revalidate-field-on-change]}]
   {:form-id form-id
    :validation-fns validation-fns
    :on-success [::on-field-ok form-id error-path field-path]
    :on-fail [::on-field-error form-id error-path field-path]
    :multi-validation-field-paths multi-validation-field-paths
    :multi-validation-fn multi-validation-fn
+   :revalidate-field-on-change revalidate-field-on-change
    })
 
 (defn validate-field-value [validation-fns value]
@@ -61,11 +62,19 @@
 (re-frame/reg-event-fx
  ::validate-field
  interceptors
- (fn [{:keys [db]} [_ {:keys [form-id validation-fns on-success on-fail multi-validation-field-paths multi-validation-fn]} value]]
-   {:dispatch (if-let [err (or (validate-field-value validation-fns value)
-                               (validate-multiple-field-values db form-id multi-validation-fn multi-validation-field-paths value))]
-                (conj on-fail err)
-                (conj on-success value))}))
+ (fn [{:keys [db]} [_ {:keys [form-id validation-fns on-success on-fail multi-validation-field-paths multi-validation-fn revalidate-field-on-change]} value]]
+   (let [result-event (if-let [err (or (validate-field-value validation-fns value)
+                                       (validate-multiple-field-values
+                                        db
+                                        form-id
+                                        multi-validation-fn
+                                        multi-validation-field-paths
+                                        value))]
+                        (conj on-fail value err)
+                        (conj on-success value))]
+     (if revalidate-field-on-change
+       {:dispatch-n [result-event [::revalidate-field form-id revalidate-field-on-change]]}
+       {:dispatch result-event}))))
 
 (defn mk-put-field-invalidation-event [form-id field-path validate-field-input]
   [::put-field-invalidation-event
@@ -117,7 +126,11 @@
    (let [form-invalidation-events (get-form-invalidation-events form-id db)
          success-event-matchers (mk-event-matchers :on-success form-invalidation-events)
          fail-event-matchers (mk-event-matchers :on-fail form-invalidation-events)]
-     ;; Possible optimization: Create an event that handles multiple input validations at once (reduce events).
+     ;; NOTE: Crashes with `re-frame: no :event handler registered for: ::async-flow/id-12345`
+     ;; when there are many invalid form fields (more than one).
+     ;; One error is enough to cancel the whole flow and they are fired at the same time.
+     ;;
+     ;; Possible optimization: Create an event that handles multiple input validations at once (reduce error events).
      {:dispatch-n form-invalidation-events
       :async-flow {:rules [{:when :seen-all-of? :events success-event-matchers
                             :dispatch-n (remove nil? [[::async-flow-fx/notify :end] on-success])}
@@ -127,3 +140,15 @@
                             :events [[::async-flow-fx/notify :end]]
                             ;;:dispatch [:println "Flow ended"]
                             :halt? true}]}})))
+
+(defn get-field-invalidation-event [db form-id field-path]
+  (let [event-no-value (->> (mk-form-invalidation-path form-id field-path)
+                            (get-in db)
+                            :validate-field-input-no-value)]
+    (conj event-no-value (db-get db form-id field-path))))
+
+(re-frame/reg-event-fx
+ ::revalidate-field
+ interceptors
+ (fn [{:keys [db]} [_ form-id field-path]]
+   {:dispatch (get-field-invalidation-event db form-id field-path)}))
