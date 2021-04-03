@@ -64,28 +64,3 @@
  ::sablier-stream-activation-visible
  (fn [db]
    false))
-
-(re-frame/reg-sub
- ::field-error_erc20-token-addr-input
- (fn [db]
-   (get-in db [:field-errors :erc20-token-addr-input])))
-
-(re-frame/reg-sub
- ::field-error_date-from-input
- (fn [db]
-   (get-in db [:field-errors :date-from-input])))
-
-(re-frame/reg-sub
- ::field-error_time-from-input
- (fn [db]
-   (get-in db [:field-errors :time-from-input])))
-
-(re-frame/reg-sub
- ::field-error_duration-input
- (fn [db]
-   (get-in db [:field-errors :duration-input])))
-
-(re-frame/reg-sub
- ::field-error_amount-input
- (fn [db]
-   (get-in db [:field-errors :amount-input])))

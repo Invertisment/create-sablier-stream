@@ -4,8 +4,7 @@
   (js/Date. (subs (.toISOString date) 0 10)))
 
 (defn- get-current-day-date! []
-  (get-day-date (js/Date.))
-  #_(js/Date. (subs (.toISOString (js/Date.)) 0 10)))
+  (get-day-date (js/Date.)))
 
 (defn date-at-least-today? [date-str]
   (when-not (empty? date-str)
@@ -23,7 +22,6 @@
     (when-not (pos? (js/Number. number-str))
       "The number should be positive.")
     (catch js/Object e
-      (println e)
       "Expected a number input.")))
 
 (defn to-validation-fn [key]

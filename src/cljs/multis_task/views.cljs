@@ -5,7 +5,9 @@
    [multis-task.events :as events]
    [multis-task.metamask :as metamask]
    [multis-task.contracts :as contracts]
-   [clojure.walk :as walk]))
+   [clojure.string :as strs]
+   [multis-task.util.form :as form]
+   [multis-task.util.form-events :as form-events]))
 
 (defn loader []
   (let [loading @(re-frame/subscribe [::subs/loading])]
@@ -21,27 +23,14 @@
     {:on-click #(re-frame/dispatch dispatch-msg)}
     title]])
 
-(defn input [label field]
-  [:div.input
-   [:div label]
-   field])
-
-(def subs-ns (namespace ::subs/_))
-(defn field-id->error-sub-id [field-id]
-  (keyword subs-ns (str "field-error_" (name field-id))))
-
-(defn field-error [field-id]
-  (when-let [err @(re-frame/subscribe [(field-id->error-sub-id field-id)])]
-    [:div.field-error err]))
-
 (defn chosen-network-name []
   (if-let [net-name @(re-frame/subscribe [::subs/chosen-network-name])]
-    (input "Network" [:div net-name])
+    (form/input "Network" [:div net-name])
     [:div]))
 
 (defn chosen-acc-addr []
   (if-let [acc-addr @(re-frame/subscribe [::subs/chosen-acc-addr])]
-    (input "Account" [:div acc-addr])
+    (form/input "Account" [:div acc-addr])
     [:div]))
 
 (defn to [to-route btn-name]
@@ -49,68 +38,41 @@
    {:on-click #(re-frame/dispatch [::events/navigate to-route])}
    btn-name])
 
-(defn ->target->value [event]
-  (-> event
-      (aget "target")
-      (aget "value")))
-
 (defn token-addr-input [title to-route btn-name]
   [:div
-   (input "ERC20 Token address"
-          [:input
-           {:default-value @(re-frame/subscribe [::subs/erc20-token-addr-input])
-            :on-change #(re-frame/dispatch [::contracts/fetch-erc20-name
-                                            (->target->value %)
-                                            [:on-field-ok :erc20-token-addr-input [:token-stream-form :erc20-token-input :addr]]
-                                            [:on-field-error :erc20-token-addr-input [:token-stream-form :erc20-token-input]]])}])
-   (field-error :erc20-token-addr-input)
-   (input "ERC20 Token name"
-          (when-let [token-name @(re-frame/subscribe [::subs/erc20-token-name-input])]
-            [:div token-name]))])
+   (form/input "ERC20 Token address"
+               [:input
+                {:default-value @(re-frame/subscribe [::subs/erc20-token-addr-input])
+                 :on-change #(re-frame/dispatch [::contracts/fetch-erc20-name
+                                                 (form/->target->value %)
+                                                 [::form-events/on-field-ok [:token-stream-form :erc20-token-addr-input] [:token-stream-form :erc20-token-input :addr]]
+                                                 [::form-events/on-field-error [:token-stream-form :erc20-token-addr-input] [:token-stream-form :erc20-token-input]]])}])
+   (form/field-error [:token-stream-form :erc20-token-addr-input])
+   (form/input "ERC20 Token name"
+               (when-let [token-name @(re-frame/subscribe [::subs/erc20-token-name-input])]
+                 [:div token-name]))])
 
 (defn token-stream-initiation []
   [:div
    [token-addr-input]
    (when @(re-frame/subscribe [::subs/authorize-sablier-visible])
      [:div
-      (input "Desired stream start date" [:input
-                                          {:type "date"
-                                           :on-change #(re-frame/dispatch
-                                                        [::events/validate-field
-                                                         (events/to-validate-field-input
-                                                          {:field-path [:token-stream-form :date-from]
-                                                           :error-label-id :date-from-input
-                                                           :validation-fns [:required :date-at-least-today?]})
-                                                         (->target->value %)])}])
-      (field-error :date-from-input)
-      (input "Desired stream start time" [:input
-                                          {:type "time"
-                                           :on-change #(re-frame/dispatch
-                                                        [::events/validate-field
-                                                         (events/to-validate-field-input
-                                                          {:field-path [:token-stream-form :time-from]
-                                                           :error-label-id :time-from-input
-                                                           :validation-fns [:required]})
-                                                         (->target->value %)])}])
-      (field-error :time-from-input)
-      (input "Duration (hours)" [:input {:type "number"
-                                         :on-change #(re-frame/dispatch
-                                                      [::events/validate-field
-                                                       (events/to-validate-field-input
-                                                        {:field-path [:token-stream-form :duration]
-                                                         :error-label-id :duration-input
-                                                         :validation-fns [:required :pos?]})
-                                                       (->target->value %)])}])
-      (field-error :duration-input)
-      (input "Amount" [:input {:type "number"
-                               :on-change #(re-frame/dispatch
-                                            [::events/validate-field
-                                             (events/to-validate-field-input
-                                              {:field-path [:token-stream-form :amount]
-                                               :error-label-id :amount-input
-                                               :validation-fns [:required :pos?]})
-                                             (->target->value %)])}])
-      (field-error :amount-input)
+      (form/field-with-err {:label "Desired stream start date"
+                            :type "date"
+                            :field-path [:token-stream-form :date-from]
+                            :validation-fns [:required :date-at-least-today?]})
+      (form/field-with-err {:label "Desired stream start time"
+                            :type "time"
+                            :field-path [:token-stream-form :time-from]
+                            :validation-fns [:required]})
+      (form/field-with-err {:label "Duration (hours)"
+                            :type "number"
+                            :field-path [:token-stream-form :duration]
+                            :validation-fns [:required :pos?]})
+      (form/field-with-err {:label "Amount"
+                            :type "number"
+                            :field-path [:token-stream-form :amount]
+                            :validation-fns [:required :pos?]})
       (let [token-name @(re-frame/subscribe [::subs/erc20-token-name-input])]
         (dispatch-button [:span "Authorize Sablier to use " token-name] [:println "hi"]))])
    ])

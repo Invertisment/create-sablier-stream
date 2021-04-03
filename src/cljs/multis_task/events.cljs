@@ -4,7 +4,9 @@
    [multis-task.db :as db]
    [multis-task.config :as config]
    [multis-task.interceptors :refer [interceptors]]
-   [multis-task.util.validation :as validation]))
+   [multis-task.util.validation :as validation]
+   [clojure.string :as strs]
+   [multis-task.subs :as subs]))
 
 (re-frame/reg-event-db
  ::initialize-db
@@ -38,26 +40,6 @@
                    (remove #(= % error) errors)
                    error)))
     ::clear-error-later error}))
-
-(defn remove-value-from-db [db field-path]
-  (update-in db (butlast field-path) dissoc (last field-path)))
-
-(re-frame/reg-event-db
- :on-field-error
- interceptors
- (fn [db [_ field-id field-path error]]
-   (-> db
-       (assoc-in [:field-errors field-id] error)
-       (remove-value-from-db field-path))))
-
-(re-frame/reg-event-db
- :on-field-ok
- interceptors
- (fn [db [_ field-id field-path value]]
-   (let [db-err-removed (update db :field-errors dissoc field-id)]
-     (if value
-       (assoc-in db-err-removed field-path value)
-       (remove-value-from-db db-err-removed field-path)))))
 
 (re-frame/reg-event-db
  :clear-error
@@ -99,19 +81,3 @@
  :js->clj
  (fn [_ [_ notify-callback data]]
    {:dispatch (conj notify-callback (js->clj data))}))
-
-(defn to-validate-field-input [{:keys [field-path error-label-id validation-fns]}]
-  {:validation-fns validation-fns
-   :on-success [:on-field-ok error-label-id field-path]
-   :on-fail [:on-field-error error-label-id field-path]
-   })
-
-(re-frame/reg-event-fx
- ::validate-field
- interceptors
- (fn [{:keys [db]} [_ {:keys [validation-fns on-success on-fail]} value]]
-   {:dispatch (if-let [err (some
-                            (fn [fn-key] ((validation/to-validation-fn fn-key) value))
-                            validation-fns)]
-                (conj on-fail err)
-                on-success)}))

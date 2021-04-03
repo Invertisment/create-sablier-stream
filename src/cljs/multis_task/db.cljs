@@ -24,7 +24,7 @@
 
 (s/def ::token-stream-form (s/keys :opt-un [::erc20-token-input ::date-from ::time-from]))
 
-(s/def ::field-errors (s/keys :opt-un [::erc20-token-addr-input]))
+(s/def ::field-errors (s/keys :opt-un [::erc20-token-addr-input ::token-stream-form]))
 
-(s/def ::db-spec (s/keys :req-un [::loader-counter ::metamask-data ::route ::ui-errors ::token-stream-form ::field-errors]
+(s/def ::db-spec (s/keys :req-un [::loader-counter ::metamask-data ::route ::ui-errors ::field-errors]
                          :opt-un []))
