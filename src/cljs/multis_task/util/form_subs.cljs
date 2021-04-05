@@ -17,9 +17,9 @@
 #_(field-key->sub-id :form-id [:field-path-1 :field-path-2])
 
 (re-frame/reg-sub
- ::field-error_token-stream-form_erc20-token-addr-input
+ ::field-error_token-stream-form_erc20-token-addr
  (fn [db]
-   (get-in db [:field-errors :token-stream-form :erc20-token-addr-input])))
+   (get-in db [:field-errors :token-stream-form :erc20-token-addr])))
 
 (re-frame/reg-sub
  ::field-error_token-stream-form_date-from

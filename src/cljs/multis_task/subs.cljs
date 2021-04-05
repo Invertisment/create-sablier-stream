@@ -1,6 +1,7 @@
 (ns multis-task.subs
   (:require
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as re-frame]
+   [multis-task.util.form-events :as form-events]))
 
 (re-frame/reg-sub
  ::loader-counter
@@ -46,19 +47,19 @@
    (:ui-errors db)))
 
 (re-frame/reg-sub
- ::erc20-token-name-input
+ ::erc20-token-name
  (fn [db]
-   (get-in db [:token-stream-form :erc20-token-input :name] "Input your ERC20 address")))
+   (get-in db [:token-stream-form :erc20-token-name] "Input your ERC20 address")))
 
 (re-frame/reg-sub
- ::erc20-token-addr-input
+ ::erc20-token-addr
  (fn [db]
-   (get-in db [:token-stream-form :erc20-token-input :addr])))
+   (get-in db [:token-stream-form :erc20-token-addr])))
 
 (re-frame/reg-sub
  ::authorize-sablier-visible
  (fn [db]
-   (boolean (get-in db [:token-stream-form :erc20-token-input :name]))))
+   (not (get-in db (form-events/to-db-error-path :token-stream-form [:erc20-token-addr])))))
 
 (re-frame/reg-sub
  ::sablier-stream-activation-visible

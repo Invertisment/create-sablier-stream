@@ -43,14 +43,14 @@
   [:div
    (form/input "ERC20 Token address"
                [:input
-                {:default-value @(re-frame/subscribe [::subs/erc20-token-addr-input])
+                {:default-value @(re-frame/subscribe [::subs/erc20-token-addr])
                  :on-change #(re-frame/dispatch [::contracts/fetch-erc20-name
                                                  (form/->target->value %)
-                                                 [::form-events/on-field-ok :token-stream-form [:erc20-token-addr-input] [:erc20-token-input :addr]]
-                                                 [::form-events/on-field-error :token-stream-form [:erc20-token-addr-input] [:erc20-token-input]]])}])
-   (form/field-error :token-stream-form [:erc20-token-addr-input])
+                                                 [::form-events/on-field-ok :token-stream-form [:erc20-token-addr] [:erc20-token-addr] (form/->target->value %)]
+                                                 [::form-events/on-field-error :token-stream-form [:erc20-token-addr] [:erc20-token-addr] (form/->target->value %)]])}])
+   (form/field-error :token-stream-form [:erc20-token-addr])
    (form/input "ERC20 Token name"
-               (when-let [token-name @(re-frame/subscribe [::subs/erc20-token-name-input])]
+               (when-let [token-name @(re-frame/subscribe [::subs/erc20-token-name])]
                  [:div token-name]))])
 
 (defn token-stream-initiation []
@@ -83,17 +83,13 @@
                             :field-path [:amount]
                             :validation-fns [:required :pos?]
                             :multi-validation-field-paths [:_ [:duration-h]]
-                            :multi-validation-fn :multiple-of-hour-seconds?
-                            :input-props {:default-value @(re-frame/subscribe
-                                                           [(form-subs/field-key->sub-id
-                                                             :token-stream-form
-                                                             [:amount])])}})
+                            :multi-validation-fn :multiple-of-hour-seconds?})
       [:button
        {:on-click #(re-frame/dispatch [::form-events/revalidate-form
                                        :token-stream-form
                                        [:println "Button on-success"]])}
        "Submit"]
-      (let [token-name @(re-frame/subscribe [::subs/erc20-token-name-input])]
+      (let [token-name @(re-frame/subscribe [::subs/erc20-token-name])]
         (dispatch-button [:span "Authorize Sablier to use " token-name] [:println "hi"]))])])
 
 (defn ui-errors [to-route btn-name]

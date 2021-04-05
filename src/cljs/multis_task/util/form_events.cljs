@@ -44,16 +44,13 @@
    (fn [fn-key] ((validation/to-validation-fn fn-key) value))
    validation-fns))
 
-(defn db-get [db form-id path]
-  (get-in db (form-utils/full-db-path form-id path)))
-
 (defn validate-multiple-field-values [db form-id multi-validation-fn multi-validation-field-paths value]
   (when (and multi-validation-field-paths multi-validation-fn)
     (let [args (map
                 (fn [token-or-field-path]
                   (case token-or-field-path
                     :_ value
-                    (db-get db form-id token-or-field-path)))
+                    (form-utils/db-get db form-id token-or-field-path)))
                 multi-validation-field-paths)]
       (apply (validation/to-multi-field-validation-fn multi-validation-fn) args))))
 
@@ -115,7 +112,7 @@
        (get-in db)
        (vals)
        (map (fn [{:keys [validate-field-input-no-value field-path]}]
-              (conj validate-field-input-no-value (db-get db form-id field-path))))))
+              (conj validate-field-input-no-value (form-utils/db-get db form-id field-path))))))
 
 (defn fill-in-form-values [db form-id callback-event]
   (when callback-event
@@ -148,7 +145,7 @@
   (let [event-no-value (->> (mk-form-invalidation-path form-id field-path)
                             (get-in db)
                             :validate-field-input-no-value)]
-    (conj event-no-value (db-get db form-id field-path))))
+    (conj event-no-value (form-utils/db-get db form-id field-path))))
 
 (re-frame/reg-event-fx
  ::revalidate-field

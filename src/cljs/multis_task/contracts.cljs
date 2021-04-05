@@ -52,8 +52,8 @@
     erc-20-abi
     (.getSigner (multis-task.metamask/mk-ethers-provider!))
     ["name"]
-    [:notify-error]
-    [:notify-error]])
+    [:println :ok]
+    [:println :error]])
 
 (re-frame/reg-fx
  ::call-method
@@ -62,7 +62,7 @@
 (re-frame/reg-event-fx
  ::fetch-erc20-name-success
  (fn [{:keys [db]} [_ token-addr success-callback token-name]]
-   (let [new-db (assoc-in db [:token-stream-form :erc20-token-input :name] token-name)]
+   (let [new-db (assoc-in db [:token-stream-form :erc20-token-name] token-name)]
      (if success-callback
        {:db new-db
         :dispatch success-callback}
