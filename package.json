@@ -1,6 +1,7 @@
 {
 	"name": "multis-task",
 	"dependencies": {
+		"bigdecimal": "0.6.1",
 		"bufferutil": "4.0.3",
 		"erc-20-abi": "1.0.0",
 		"ethers": "5.1.0",

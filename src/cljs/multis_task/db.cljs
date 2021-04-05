@@ -21,7 +21,7 @@
 (s/def ::metamask-data (s/keys :req-un [::initialized]
                                :opt-un [::network-name ::chosen-account]))
 
-(s/def ::token-stream-form (s/keys :opt-un [::erc20-token-name ::erc20-token-addr ::date-from ::time-from]))
+(s/def ::token-stream-form (s/keys :opt-un [::erc20-token-name ::erc20-token-decimals ::erc20-token-addr ::date-from ::time-from]))
 
 (s/def ::field-errors (s/keys :opt-un [::erc20-token-addr-input ::token-stream-form]))
 

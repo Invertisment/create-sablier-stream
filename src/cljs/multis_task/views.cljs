@@ -44,13 +44,16 @@
    (form/input "ERC20 Token address"
                [:input
                 {:default-value @(re-frame/subscribe [::subs/erc20-token-addr])
-                 :on-change #(re-frame/dispatch [::contracts/fetch-erc20-name
+                 :on-change #(re-frame/dispatch [::contracts/fetch-erc20-details
                                                  (form/->target->value %)
                                                  [::form-events/on-field-ok :token-stream-form [:erc20-token-addr] [:erc20-token-addr] (form/->target->value %)]
                                                  [::form-events/on-field-error :token-stream-form [:erc20-token-addr] [:erc20-token-addr] (form/->target->value %)]])}])
    (form/field-error :token-stream-form [:erc20-token-addr])
    (form/input "ERC20 Token name"
                (when-let [token-name @(re-frame/subscribe [::subs/erc20-token-name])]
+                 [:div token-name]))
+   (form/input "ERC20 Token decimals"
+               (when-let [token-name @(re-frame/subscribe [::subs/erc20-token-decimals])]
                  [:div token-name]))])
 
 (defn token-stream-initiation []
@@ -72,18 +75,18 @@
                             :multi-validation-field-paths [[:date-from] :_]
                             :multi-validation-fn :date-time-after-now?})
       (form/field-with-err {:label "Stream duration (hours)"
-                            :type "number"
+                            :type "text"
                             :form-id :token-stream-form
                             :field-path [:duration-h]
                             :validation-fns [:required :pos?]
                             :revalidate-field-on-change [:amount]})
       (form/field-with-err {:label "ERC20 Token amount"
-                            :type "number"
+                            :type "text"
                             :form-id :token-stream-form
                             :field-path [:amount]
                             :validation-fns [:required :pos?]
-                            :multi-validation-field-paths [:_ [:duration-h]]
-                            :multi-validation-fn :multiple-of-hour-seconds?})
+                            :multi-validation-field-paths [:_ [:erc20-token-decimals] [:duration-h]]
+                            :multi-validation-fn :amount-multiple-of-hour-seconds?})
       [:button
        {:on-click #(re-frame/dispatch [::form-events/revalidate-form
                                        :token-stream-form

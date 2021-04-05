@@ -2,4 +2,5 @@
  :npm-deps {"bufferutil" "^4.0.3"
             "ethers" "^5.1.0"
             "utf-8-validate" "^5.0.4"
-            "erc-20-abi" "1.0.0"}}
+            "erc-20-abi" "1.0.0"
+            "bigdecimal" "^0.6.1"}}

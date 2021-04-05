@@ -5,7 +5,8 @@
             ["erc-20-abi" :as erc-20-abi]
             [ethers :as ethers]
             [multis-task.util.async :as async]
-            [multis-task.events :as events]))
+            [multis-task.events :as events]
+            [day8.re-frame.async-flow-fx :as async-flow-fx]))
 
 (re-frame/reg-event-fx
  :notify-http-failure
@@ -37,9 +38,9 @@
 (defn is-addr? [addr]
   (.isAddress (.-utils ethers) addr))
 
-(defn- call-read-only-method-fx [[contract-addr abi signer [contract-method contract-args] on-success on-fail]]
+(defn- call-read-only-method-fx [[contract-addr abi [contract-method contract-args] on-success on-fail]]
   (if (is-addr? contract-addr)
-    (let [contract (ethers/Contract. contract-addr abi signer)]
+    (let [contract (ethers/Contract. contract-addr abi (.getSigner (multis-task.metamask/mk-ethers-provider!)))]
       (async/promise->dispatch
        (apply (aget contract contract-method) contract-args)
        {:on-success on-success
@@ -50,7 +51,6 @@
    ["0xfab46e002bbf0b4509813474841e0716e6730136"
     #_"0x1111111111111111111111111111111111111111"
     erc-20-abi
-    (.getSigner (multis-task.metamask/mk-ethers-provider!))
     ["name"]
     [:println :ok]
     [:println :error]])
@@ -59,21 +59,49 @@
  ::call-method
  call-read-only-method-fx)
 
-(re-frame/reg-event-fx
+(re-frame/reg-event-db
  ::fetch-erc20-name-success
- (fn [{:keys [db]} [_ token-addr success-callback token-name]]
-   (let [new-db (assoc-in db [:token-stream-form :erc20-token-name] token-name)]
-     (if success-callback
-       {:db new-db
-        :dispatch success-callback}
-       {:db new-db}))))
+ (fn [db [_ details-value]]
+   (assoc-in db [:token-stream-form :erc20-token-name] details-value)))
+
+(re-frame/reg-event-db
+ ::fetch-erc20-decimals-success
+ (fn [db [_ details-value]]
+   (assoc-in db [:token-stream-form :erc20-token-decimals] details-value)))
 
 (re-frame/reg-event-fx
- ::fetch-erc20-name
- (fn [cofx [_ token-addr on-success on-fail]]
-   {::call-method [token-addr
-                   erc-20-abi
-                   (.getSigner (multis-task.metamask/mk-ethers-provider!))
-                   ["name"]
-                   [::fetch-erc20-name-success token-addr (conj on-success token-addr)]
-                   on-fail]}))
+ ::fetch-erc20-details-err
+ (fn [{:keys [db]} [_ fallthrough-callback error]]
+   {:dispatch (conj fallthrough-callback error)}))
+
+(re-frame/reg-event-fx
+ ::ev-call-contract-method
+ (fn [{:keys [db]} [_ call-method-args]]
+   {::call-method call-method-args}))
+
+(re-frame/reg-event-fx
+ ::fetch-erc20-details
+ (fn [{:keys [db]} [_ token-addr on-success on-fail]]
+   {:db (update-in db [:token-stream-form] dissoc :erc20-token-name :erc20-token-decimals)
+    :async-flow {:rules [{:when :seen-all-of?
+                          :events [::fetch-erc20-name-success ::fetch-erc20-decimals-success]
+                          :dispatch-n [[::async-flow-fx/notify ::fetch-erc20-info-done]
+                                       (conj on-success token-addr)]}
+                         {:when :seen?
+                          :events ::fetch-erc20-details-err
+                          :dispatch [::async-flow-fx/notify ::fetch-erc20-info-done]}
+                         {:when :seen?
+                          :events [[::async-flow-fx/notify ::fetch-erc20-info-done]]
+                          :dispatch [::events/decrease-loader-counter]
+                          :halt true}]}
+    :dispatch-n [[::events/increase-loader-counter]
+                 [::ev-call-contract-method [token-addr
+                                             erc-20-abi
+                                             ["name"]
+                                             [::fetch-erc20-name-success]
+                                             [::fetch-erc20-details-err on-fail]]]
+                 [::ev-call-contract-method [token-addr
+                                             erc-20-abi
+                                             ["decimals"]
+                                             [::fetch-erc20-decimals-success]
+                                             [::fetch-erc20-details-err on-fail]]]]}))
