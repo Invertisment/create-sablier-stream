@@ -38,7 +38,7 @@
       (when (> now input)
         "Expected future Date and Time."))))
 
-(defn hours-multiple-of? [hours number]
+(defn multiple-of-hour-seconds? [number hours]
   (let [seconds (* hours 60)
         residue (mod seconds number)]
     (when (not= residue 0)
@@ -47,4 +47,4 @@
 (defn to-multi-field-validation-fn [key]
   (case key
     :date-time-after-now? date-time-after-now?
-    :hours-multiple-of? hours-multiple-of?))
+    :multiple-of-hour-seconds? multiple-of-hour-seconds?))

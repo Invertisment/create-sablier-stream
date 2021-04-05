@@ -1,13 +1,7 @@
 (ns multis-task.util.form
-  (:require [clojure.string :as strs]
-            [re-frame.core :as re-frame]
+  (:require [re-frame.core :as re-frame]
             [multis-task.util.form-subs :as form-subs]
             [multis-task.util.form-events :as form-events]))
-
-(def err-subs-ns (namespace ::form-subs/_))
-(defn field-path->error-sub-id [form-id field-path]
-  (keyword err-subs-ns (str "field-error_" (name form-id) "_" (strs/join "_" (map name field-path)))))
-#_(field-path->error-sub-id :form-id [:form-data :field-1])
 
 (defn ->target->value [event]
   (-> event
@@ -37,23 +31,29 @@ Existence of :revalidate-field-on-change and :multi-validation-fn on a single fi
    field])
 
 (defn field-error [form-id field-path]
-  (when-let [err @(re-frame/subscribe [(field-path->error-sub-id form-id field-path)])]
+  (when-let [err @(re-frame/subscribe [(form-subs/field-path->error-sub-id form-id field-path)])]
     [:div.field-error err]))
 
-(defn field-with-err [{:keys [form-id label type field-path error-path validation-fns] :as field-description}]
+(defn field-with-err [{:keys [form-id label type field-path error-path validation-fns input-props] :as field-description}]
   (let [mandatory-error-path (or error-path field-path)]
     [:div
      (input
       label
       [:input
-       {:type type
-        :on-change (mk-on-change-dispatch-fn!
-                    (merge
-                     {:error-path mandatory-error-path}
-                     (select-keys
-                      field-description
-                      [:form-id :field-path :validation-fns
-                       :multi-validation-field-paths
-                       :multi-validation-fn
-                       :revalidate-field-on-change])))}])
+       (merge
+        input-props
+        {:type type
+         :on-change (mk-on-change-dispatch-fn!
+                     (merge
+                      {:error-path mandatory-error-path}
+                      (select-keys
+                       field-description
+                       [:form-id :field-path :validation-fns
+                        :multi-validation-field-paths
+                        :multi-validation-fn
+                        :revalidate-field-on-change])))
+         :default-value @(re-frame/subscribe
+                          [(form-subs/field-key->sub-id
+                            form-id
+                            field-path)])})])
      (field-error form-id mandatory-error-path)]))

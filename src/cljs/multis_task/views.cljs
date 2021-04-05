@@ -7,7 +7,8 @@
    [multis-task.contracts :as contracts]
    [clojure.string :as strs]
    [multis-task.util.form :as form]
-   [multis-task.util.form-events :as form-events]))
+   [multis-task.util.form-events :as form-events]
+   [multis-task.util.form-subs :as form-subs]))
 
 (defn loader []
   (let [loading @(re-frame/subscribe [::subs/loading])]
@@ -57,32 +58,36 @@
    [token-addr-input]
    (when @(re-frame/subscribe [::subs/authorize-sablier-visible])
      [:div
-      (form/field-with-err {:label "Desired stream start date"
+      (form/field-with-err {:label "Stream start date"
                             :type "date"
                             :form-id :token-stream-form
                             :field-path [:date-from]
                             :validation-fns [:required :date-at-least-today?]
                             :revalidate-field-on-change [:time-from]})
-      (form/field-with-err {:label "Desired stream start time"
+      (form/field-with-err {:label "Stream start time"
                             :type "time"
                             :form-id :token-stream-form
                             :field-path [:time-from]
                             :validation-fns [:required]
                             :multi-validation-field-paths [[:date-from] :_]
                             :multi-validation-fn :date-time-after-now?})
-      (form/field-with-err {:label "Duration (hours)"
+      (form/field-with-err {:label "Stream duration (hours)"
                             :type "number"
                             :form-id :token-stream-form
-                            :field-path [:duration]
+                            :field-path [:duration-h]
                             :validation-fns [:required :pos?]
                             :revalidate-field-on-change [:amount]})
-      (form/field-with-err {:label "Amount"
+      (form/field-with-err {:label "ERC20 Token amount"
                             :type "number"
                             :form-id :token-stream-form
                             :field-path [:amount]
                             :validation-fns [:required :pos?]
-                            :multi-validation-field-paths [[:duration] :_]
-                            :multi-validation-fn :hours-multiple-of?})
+                            :multi-validation-field-paths [:_ [:duration-h]]
+                            :multi-validation-fn :multiple-of-hour-seconds?
+                            :input-props {:default-value @(re-frame/subscribe
+                                                           [(form-subs/field-key->sub-id
+                                                             :token-stream-form
+                                                             [:amount])])}})
       [:button
        {:on-click #(re-frame/dispatch [::form-events/revalidate-form
                                        :token-stream-form

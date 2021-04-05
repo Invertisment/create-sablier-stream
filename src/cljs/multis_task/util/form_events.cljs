@@ -2,16 +2,14 @@
   (:require [re-frame.core :as re-frame]
             [multis-task.interceptors :refer [interceptors]]
             [multis-task.util.validation :as validation]
-            [day8.re-frame.async-flow-fx :as async-flow-fx]))
-
-(defn full-db-path [form-id path]
-  (cons form-id path))
+            [day8.re-frame.async-flow-fx :as async-flow-fx]
+            [multis-task.util.form-utils :as form-utils]))
 
 (defn remove-value-from-db [db form-id field-path]
-  (update-in db (full-db-path form-id (butlast field-path)) dissoc (last field-path)))
+  (update-in db (form-utils/full-db-path form-id (butlast field-path)) dissoc (last field-path)))
 
 (defn to-db-error-path [form-id field-path]
-  (cons :field-errors (full-db-path form-id field-path)))
+  (cons :field-errors (form-utils/full-db-path form-id field-path)))
 #_(to-db-error-path [:intermediate-path :field-1])
 
 (re-frame/reg-event-db
@@ -20,7 +18,7 @@
  (fn [db [_ form-id error-path field-path value error]]
    (-> db
        (assoc-in (to-db-error-path form-id error-path) error)
-       (assoc-in (full-db-path form-id field-path) value))))
+       (assoc-in (form-utils/full-db-path form-id field-path) value))))
 
 (re-frame/reg-event-db
  ::on-field-ok
@@ -28,7 +26,7 @@
  (fn [db [_ form-id error-path field-path value]]
    (let [db-err-removed (assoc-in db (to-db-error-path form-id error-path) nil)]
      (if value
-       (assoc-in db-err-removed (full-db-path form-id field-path) value)
+       (assoc-in db-err-removed (form-utils/full-db-path form-id field-path) value)
        (remove-value-from-db db-err-removed form-id field-path)))))
 
 (defn to-validate-field-input [{:keys [form-id field-path error-path validation-fns multi-validation-field-paths multi-validation-fn revalidate-field-on-change]}]
@@ -47,7 +45,7 @@
    validation-fns))
 
 (defn db-get [db form-id path]
-  (get-in db (full-db-path form-id path)))
+  (get-in db (form-utils/full-db-path form-id path)))
 
 (defn validate-multiple-field-values [db form-id multi-validation-fn multi-validation-field-paths value]
   (when (and multi-validation-field-paths multi-validation-fn)
@@ -83,7 +81,7 @@
     :field-path field-path}])
 
 (defn mk-form-invalidation-path [form-id field-path]
-  (cons :form-invalidation (full-db-path form-id field-path)))
+  (cons :form-invalidation (form-utils/full-db-path form-id field-path)))
 
 ;; HACK: This is a small memory leak.
 ;; If there will be a lot of distinct forms (millions?) then it will be noticeable.
@@ -119,6 +117,10 @@
        (map (fn [{:keys [validate-field-input-no-value field-path]}]
               (conj validate-field-input-no-value (db-get db form-id field-path))))))
 
+(defn fill-in-form-values [db form-id callback-event]
+  (when callback-event
+    (conj callback-event (form-id db))))
+
 (re-frame/reg-event-fx
  ::revalidate-form
  interceptors
@@ -133,7 +135,8 @@
      ;; Possible optimization: Create an event that handles multiple input validations at once (reduce error events).
      {:dispatch-n form-invalidation-events
       :async-flow {:rules [{:when :seen-all-of? :events success-event-matchers
-                            :dispatch-n (remove nil? [[::async-flow-fx/notify :end] on-success])}
+                            :dispatch-n (remove nil? [[::async-flow-fx/notify :end]
+                                                      (fill-in-form-values db form-id on-success)])}
                            {:when :seen-any-of? :events fail-event-matchers
                             :dispatch-n [[::async-flow-fx/notify :end]]}
                            {:when :seen?
