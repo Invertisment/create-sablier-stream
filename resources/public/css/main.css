@@ -29,6 +29,11 @@ body {
     align-items: baseline;
 }
 
+.success {
+    background: #00ff0044;
+    padding: 2px;
+}
+
 .error {
     background: #ff000044;
     padding: 2px;

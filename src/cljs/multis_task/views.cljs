@@ -59,49 +59,70 @@
 (defn token-stream-initiation []
   [:div
    [token-addr-input]
-   (when @(re-frame/subscribe [::subs/authorize-sablier-visible])
-     [:div
-      (form/field-with-err {:label "Stream start date"
-                            :type "date"
-                            :form-id :token-stream-form
-                            :field-path [:date-from]
-                            :validation-fns [:required :date-at-least-today?]
-                            :revalidate-field-on-change [:time-from]})
-      (form/field-with-err {:label "Stream start time"
-                            :type "time"
-                            :form-id :token-stream-form
-                            :field-path [:time-from]
-                            :validation-fns [:required]
-                            :multi-validation-field-paths [[:date-from] :_]
-                            :multi-validation-fn :date-time-after-now?})
-      (form/field-with-err {:label "Stream duration (hours)"
-                            :type "text"
-                            :form-id :token-stream-form
-                            :field-path [:duration-h]
-                            :validation-fns [:required :pos?]
-                            :revalidate-field-on-change [:amount]})
-      (form/field-with-err {:label "ERC20 Token amount"
-                            :type "text"
-                            :form-id :token-stream-form
-                            :field-path [:amount]
-                            :validation-fns [:required :pos?]
-                            :multi-validation-field-paths [:_ [:erc20-token-decimals] [:duration-h]]
-                            :multi-validation-fn :amount-multiple-of-hour-seconds?})
-      [:button
-       {:on-click #(re-frame/dispatch [::form-events/revalidate-form
-                                       :token-stream-form
-                                       [:println "Button on-success"]])}
-       "Submit"]
-      (let [token-name @(re-frame/subscribe [::subs/erc20-token-name])]
-        (dispatch-button [:span "Authorize Sablier to use " token-name] [:println "hi"]))])])
+   (let [authorize-sablier-disabled @(re-frame/subscribe [::subs/authorize-sablier-disabled])]
+     (when @(re-frame/subscribe [::subs/authorize-sablier-visible])
+       [:div
+        (form/field-with-err {:label "Stream start date"
+                              :type "date"
+                              :form-id :token-stream-form
+                              :field-path [:date-from]
+                              :validation-fns [:required :date-at-least-today?]
+                              :revalidate-field-on-change [:time-from]
+                              :input-props {:disabled authorize-sablier-disabled}})
+        (form/field-with-err {:label "Stream start time"
+                              :type "time"
+                              :form-id :token-stream-form
+                              :field-path [:time-from]
+                              :validation-fns [:required]
+                              :multi-validation-field-paths [[:date-from] :_]
+                              :multi-validation-fn :date-time-after-now?
+                              :input-props {:disabled authorize-sablier-disabled}})
+        (form/field-with-err {:label "Stream duration (hours)"
+                              :type "text"
+                              :form-id :token-stream-form
+                              :field-path [:duration-h]
+                              :validation-fns [:required :pos?]
+                              :revalidate-field-on-change [:amount]
+                              :input-props {:disabled authorize-sablier-disabled}})
+        (form/field-with-err {:label "ERC20 Token amount"
+                              :type "text"
+                              :form-id :token-stream-form
+                              :field-path [:amount]
+                              :validation-fns [:required :pos?]
+                              :multi-validation-field-paths [:_ [:erc20-token-decimals] [:duration-h]]
+                              :multi-validation-fn :amount-multiple-of-hour-seconds?
+                              :input-props {:disabled authorize-sablier-disabled}})
+        [:button
+         {:on-click #(re-frame/dispatch [::form-events/revalidate-form
+                                         :token-stream-form
+                                         [::contracts/erc20-approve-to-sablier
+                                          [:notify-error "Amount approved for use in Sablier contract."]
+                                          [:notify-error]]])
+          :disabled authorize-sablier-disabled}
+         (let [token-name @(re-frame/subscribe [::subs/erc20-token-name])]
+           [:span "Authorize Sablier to use " token-name])]
+        (when @(re-frame/subscribe [::subs/sablier-stream-activation-visible])
+          [:div
+           [:button
+            {:on-click #(re-frame/dispatch [::form-events/with-form-values
+                                            :token-stream-form
+                                            [::contracts/sablier-start-stream
+                                             [::events/navigate :stream-creation-success]
+                                             [:notify-error]]])}
+            [:span "Activate Sablier token stream"]]])]))])
 
-(defn ui-errors [to-route btn-name]
+(defn preview-notifs [notif-type element-with-classes notifs]
+  [:div
+   (map
+    (fn [notif]
+      ^{:key notif} [element-with-classes notif (dispatch-button "Clear" [:clear-notif notif-type notif])])
+    notifs)])
+
+(defn ui-notifs [to-route btn-name]
   (when-let [errors (seq @(re-frame/subscribe [::subs/ui-errors]))]
-    [:div
-     (map
-      (fn [error]
-        ^{:key error} [:div.space-between.error error (dispatch-button "Clear" [:clear-error error])])
-      errors)]))
+    (preview-notifs :ui-errors :div.space-between.error errors))
+  (when-let [texts (seq @(re-frame/subscribe [::subs/ui-successes]))]
+    (preview-notifs :ui-successes :div.space-between.success texts)))
 
 (defn metamask-info []
   [:div
@@ -110,7 +131,7 @@
 
 (defn page [title & body]
   [:div
-   [ui-errors]
+   [ui-notifs]
    [:h1 title]
    (vec (cons :div body))])
 #_(page "hi" :1 :2 :3)
@@ -125,12 +146,13 @@
                               "Create token stream"
                               [metamask-info]
                               [token-stream-initiation]
-                              (dispatch-button "Fetch Sablier ABI" [::contracts/fetch-abi :sablier [:console-log] [:notify-error]])
-                              (dispatch-button "Fetch erc20 ABI" [::contracts/fetch-abi :erc20 [:console-log] [:notify-error]])
-                              (dispatch-button "Fetch bruh ABI" [::contracts/fetch-abi :bruh [:console-log] [:notify-error]])
-                              (dispatch-button "Call FAU contract" [::contracts/call-FAU-name])
                               (to :home "Go to Home")
-                              [:div "FAU addr: 0xfab46e002bbf0b4509813474841e0716e6730136"])
+                              #_[:div "FAU addr: 0xfab46e002bbf0b4509813474841e0716e6730136"])
+      :stream-creation-success (page
+                                "Stream created"
+                                [metamask-info]
+                                [:p.success "Stream created. Head to Etherscan and enter your account details."]
+                                (dispatch-button "Create a new payment stream" [::contracts/reset-stream-flow [::events/navigate :initiate-token-stream]]))
       [:div
        [:h1 "Not found"]
        [to :home "Return to start"]])))

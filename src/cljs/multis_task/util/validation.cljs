@@ -1,5 +1,5 @@
 (ns multis-task.util.validation
-  (:require ["bigdecimal" :as bigdecimal]))
+  (:require [multis-task.util.bigdec :as bigdec]))
 
 (defn- get-day-date [date]
   (js/Date. (subs (.toISOString date) 0 10)))
@@ -20,7 +20,7 @@
 
 (defn pos-str? [number-str]
   (try
-    (when-not (= 1 (.signum (bigdecimal/BigDecimal. number-str)))
+    (when-not (= 1 (.signum (bigdec/str->bigdec number-str)))
       "The number should be positive.")
     (catch js/Object e
       "Expected a number input.")))
@@ -39,43 +39,24 @@
       (when (> now input)
         "Expected future Date and Time."))))
 
-(defn str->bigdec
-  ([s] (bigdecimal/BigDecimal. s))
-  ([s scale] (.setScale
-              (bigdecimal/BigDecimal. s)
-              (js/Number scale))))
-#_(.toString (str->bigdec 5 2))
-#_(.toString (str->bigdec "5"))
-#_(.toString (str->bigdec 5))
-
-(def bigdec-rounding-mode (.HALF_UP bigdecimal/RoundingMode))
-
-(def bigdec-zero (str->bigdec "0"))
-#_(.toString bigdec-zero)
-
-(defn bigdec-zero? [bigdec]
-  (= 0 (.compareTo bigdec-zero bigdec)))
-#_(bigdec-zero? (str->bigdec 0 4))
-
 (defn amount-multiple-of-hour-seconds? [amount decimals hours]
   (try
-    (let [amount (str->bigdec amount decimals)
-          ten-pow-to-decimals (.pow (str->bigdec "10") decimals)
-          seconds (.multiply (str->bigdec hours) (str->bigdec "60"))
-          seconds-div (.divide (.multiply (str->bigdec hours) (str->bigdec "60"))
-                               ten-pow-to-decimals
-                               decimals
-                               bigdec-rounding-mode)
+    (let [amount (bigdec/str->bigdec amount decimals)
+          ten-pow-to-decimals (.pow (bigdec/str->bigdec "10") decimals)
+          seconds (-> (bigdec/str->bigdec hours)
+                      (.multiply (bigdec/str->bigdec "60"))
+                      (.multiply (bigdec/str->bigdec "60")))
+          seconds-div (.movePointLeft seconds decimals)
           remainder (.remainder amount seconds-div)
           closest-match-bottom (.subtract amount remainder)
           closest-match-top (.add closest-match-bottom seconds-div)]
-      (when-not (bigdec-zero? remainder)
+      (when-not (bigdec/bigdec-zero? remainder)
         [:div
-         (str "Amount (" amount ") must be a multiple of " seconds-div " (" hours "h * 60 / (10^"decimals")).")
-         (when-not (or (bigdec-zero? amount)
-                       (bigdec-zero? seconds))
+         (str "Amount (" amount ") must be a multiple of " seconds-div " (" hours "h*60*60*10^-"decimals").")
+         (when-not (or (bigdec/bigdec-zero? amount)
+                       (bigdec/bigdec-zero? seconds))
            [:div
-            (if (bigdec-zero? closest-match-bottom)
+            (if (bigdec/bigdec-zero? closest-match-bottom)
               (str "Closest matching amount is " closest-match-top ".")
               (str "Closest matching amounts are " closest-match-bottom " and " closest-match-top "."))])]))
     (catch js/Object e

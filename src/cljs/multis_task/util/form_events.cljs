@@ -141,6 +141,12 @@
                             ;;:dispatch [:println "Flow ended"]
                             :halt? true}]}})))
 
+(re-frame/reg-event-fx
+ ::with-form-values
+ interceptors
+ (fn [{:keys [db]} [_ form-id on-success]]
+   {:dispatch (fill-in-form-values db form-id on-success)}))
+
 (defn get-field-invalidation-event [db form-id field-path]
   (let [event-no-value (->> (mk-form-invalidation-path form-id field-path)
                             (get-in db)

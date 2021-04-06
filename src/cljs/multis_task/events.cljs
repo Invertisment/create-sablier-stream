@@ -14,46 +14,62 @@
  (fn [_ _]
    db/default-db))
 
-(defn change-loader-timer-fx [{:keys [db] :as cofx} op]
-  {:db (update db :loader-counter op 1)})
-#_(change-loader-timer-fx {:db {:loader-counter 0}} +)
+(defn change-loader-timer-fx [{:keys [db] :as cofx} op further-event further-event-args]
+  (if further-event
+    {:db (update db :loader-counter op 1)
+     :dispatch (into further-event further-event-args)}
+    {:db (update db :loader-counter op 1)}))
+#_(change-loader-timer-fx {:db {:loader-counter 0}} + [:println] [[:arg1 :arg2]])
 
 (re-frame/reg-event-fx
  ::increase-loader-counter
  interceptors
- (fn [cofx _]
-   (change-loader-timer-fx cofx +)))
+ (fn [cofx [_ further-event & further-event-args]]
+   (change-loader-timer-fx cofx + further-event further-event-args)))
 
 (re-frame/reg-event-fx
  ::decrease-loader-counter
  interceptors
- (fn [cofx _]
-   (change-loader-timer-fx cofx -)))
+ (fn [cofx [_ further-event & further-event-args]]
+   (change-loader-timer-fx cofx - further-event further-event-args)))
+
+(defn append-notification [db notif-type text]
+  {:db (update db notif-type
+               (fn [texts]
+                 (conj
+                  (remove #(= % text) texts)
+                  text)))
+   ::clear-notif-later {:notif-type notif-type
+                        :text text}})
 
 (re-frame/reg-event-fx
  :notify-error
  interceptors
  (fn [{:keys [db] :as cofx} [_ error]]
-   {:db (update db :ui-errors
-                (fn [errors]
-                  (conj
-                   (remove #(= % error) errors)
-                   error)))
-    ::clear-error-later error}))
+   (append-notification db :ui-errors error)))
+
+(re-frame/reg-event-fx
+ :notify-success
+ interceptors
+ (fn [{:keys [db] :as cofx} [_ text]]
+   (append-notification db :ui-successes text)))
+
+(defn clear-notif [db notif-type notif]
+  (update db notif-type
+          (fn [notifs]
+            (remove #(= % notif) notifs))))
 
 (re-frame/reg-event-db
- :clear-error
+ :clear-notif
  interceptors
- (fn [db [_ error]]
-   (update db :ui-errors
-           (fn [errors]
-             (remove #(= % error) errors)))))
+ (fn [db [_ notif-type error]]
+   (clear-notif db notif-type error)))
 
 (re-frame/reg-fx
- ::clear-error-later
- (fn [error]
+ ::clear-notif-later
+ (fn [{:keys [notif-type text]}]
    (js/setTimeout
-    #(re-frame/dispatch [:clear-error error])
+    #(re-frame/dispatch [:clear-notif notif-type text])
     7001)))
 
 (re-frame/reg-event-db

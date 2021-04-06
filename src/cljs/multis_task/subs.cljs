@@ -47,6 +47,11 @@
  (fn [db]
    (:ui-errors db)))
 
+(re-frame/reg-sub
+ ::ui-successes
+ (fn [db]
+   (:ui-successes db)))
+
 (def no-token-msg "Input your ERC20 address.")
 
 (re-frame/reg-sub
@@ -73,4 +78,11 @@
 (re-frame/reg-sub
  ::sablier-stream-activation-visible
  (fn [db]
-   false))
+   (db :erc20-sablier-deposit-approval-done)))
+
+(re-frame/reg-sub
+ ::authorize-sablier-disabled
+ (fn [query-v]
+   [(re-frame/subscribe [::sablier-stream-activation-visible])])
+ (fn [[sablier-stream-activation-visible]]
+   sablier-stream-activation-visible))
