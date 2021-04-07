@@ -56,13 +56,13 @@
     (let [amount (bigdec/->bigdec amount decimals)
           ten-pow-to-decimals (.pow (bigdec/->bigdec "10") decimals)
           seconds (to-seconds hours)
-          seconds-div (.movePointLeft seconds decimals)
+          seconds-div (.stripTrailingZeros (.movePointLeft seconds decimals))
           remainder (.remainder amount seconds-div)
-          closest-match-bottom (.subtract amount remainder)
-          closest-match-top (.add closest-match-bottom seconds-div)]
+          closest-match-bottom (.stripTrailingZeros (.subtract amount remainder))
+          closest-match-top (.stripTrailingZeros (.add closest-match-bottom seconds-div))]
       (when-not (bigdec/bigdec-zero? remainder)
         [:div
-         (str "Amount (" amount ") must be a multiple of " seconds-div " (" hours "h*60*60*10^-"decimals").")
+         (str "Amount " (.stripTrailingZeros amount) " must be a multiple of " seconds-div " (" hours "h*60*60*10^-"decimals").")
          (when-not (or (bigdec/bigdec-zero? amount)
                        (bigdec/bigdec-zero? seconds))
            [:div
