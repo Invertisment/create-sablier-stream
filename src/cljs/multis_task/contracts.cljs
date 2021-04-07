@@ -10,6 +10,7 @@
             ["bigdecimal" :as bigdecimal]
             [multis-task.util.bigdec :as bigdec]))
 
+;; HACK: Hardcoded network addr
 (def sablier-contract-addr-rinkeby "0xc04Ad234E01327b24a831e3718DBFcbE245904CC")
 
 (re-frame/reg-event-fx
@@ -43,9 +44,9 @@
 (defn is-addr? [addr]
   (.isAddress (.-utils ethers) addr))
 
-(defn- call-method-fx [contract-addr abi signer [contract-method contract-args] on-success on-fail]
+(defn- call-method-fx [contract-addr abi signer [contract-method & contract-args] on-success on-fail]
   (if (is-addr? contract-addr)
-    (let [contract (ethers/Contract. contract-addr abi (.getSigner (multis-task.metamask/mk-ethers-provider!)))]
+    (let [contract (ethers/Contract. contract-addr abi signer)]
       (async/promise->dispatch
        (apply (aget contract contract-method) contract-args)
        {:on-success on-success
@@ -82,6 +83,11 @@
     contract-args
     on-success
     on-fail)))
+
+(re-frame/reg-event-fx
+ ::fill-abi-and-call-read-write-method
+ (fn [_ [_ rw-method-args fetched-abi]]
+   {::call-read-write-method (conj rw-method-args fetched-abi)}))
 
 (re-frame/reg-event-db
  ::fetch-erc20-name-success
@@ -131,37 +137,29 @@
                                              erc-20-abi]]]}))
 
 (defn calc-deposit [amount erc20-token-decimals]
-  (str (.movePointRight (bigdec/str->bigdec amount) (js/Number erc20-token-decimals))))
+  (str (.movePointRight (bigdec/->bigdec amount) (js/Number erc20-token-decimals))))
 
 (defn calc-start-time [date-from time-from]
   (.round js/Math (/ (.getTime (js/Date. (str date-from " " time-from))) 1000)))
 
 (defn calc-end-time [start-time duration-h]
-  (+ start-time (* 60 (js/Number duration-h))))
+  (+ start-time (* 60 60 (js/Number duration-h))))
 
 (re-frame/reg-event-fx
  ::erc20-approve-sablier-deposit--success
  (fn [{:keys [db]} [_ to-dispatch]]
-   (println "to-dispatch" to-dispatch)
-   {}
    {:db (assoc db :erc20-sablier-deposit-approval-done true)
     :dispatch to-dispatch}))
 
 (re-frame/reg-event-fx
  ::erc20-approve-to-sablier
- (fn [{:keys [db]} [_ on-success on-fail {:keys [erc20-token-addr erc20-token-decimals amount date-from time-from duration-h] :as form-fields}]]
-   (let [final-deposit (calc-deposit amount erc20-token-decimals)
-         start-time (calc-start-time date-from time-from)
-         end-time (calc-end-time start-time duration-h)]
-     (println (str final-deposit)))
-   ;;{:erc20-token-addr 0xfab46e002bbf0b4509813474841e0716e6730136, :date-from 2021-04-08, :time-from 10:04, :duration-h 1, :amount 60}
-   {:dispatch [::erc20-approve-sablier-deposit--success on-success]
-    ;;::call-read-write-method [erc20-token-addr
-    ;;                          ["approve" sablier-contract-addr-rinkeby final-deposit]
-    ;;                          [::erc20-approve-sablier-deposit--success]
-    ;;                          on-fail
-    ;;                          erc-20-abi]
-    }))
+ (fn [{:keys [db]} [_ on-success on-fail {:keys [erc20-token-addr erc20-token-decimals amount] :as form-fields}]]
+   (let [final-deposit (str (calc-deposit amount erc20-token-decimals))]
+     {::call-read-write-method [erc20-token-addr ;; HACK: Hardcoded network addr
+                                ["approve" sablier-contract-addr-rinkeby final-deposit]
+                                [::erc20-approve-sablier-deposit--success on-success]
+                                on-fail
+                                erc-20-abi]})))
 
 (re-frame/reg-event-fx
  ::sablier-start-stream--success
@@ -170,18 +168,18 @@
 
 (re-frame/reg-event-fx
  ::sablier-start-stream
- (fn [{:keys [db]} [_ on-success on-fail {:keys [erc20-token-addr erc20-token-decimals amount date-from time-from duration-h] :as form-fields}]]
+ (fn [{:keys [db]} [_ on-success on-fail {:keys [erc20-token-addr erc20-token-decimals amount date-from time-from duration-h recipient-addr] :as form-fields}]]
    (let [final-deposit (calc-deposit amount erc20-token-decimals)
          start-time (calc-start-time date-from time-from)
-         end-time (calc-end-time start-time duration-h)])
-   ;;{:erc20-token-addr 0xfab46e002bbf0b4509813474841e0716e6730136, :date-from 2021-04-08, :time-from 10:04, :duration-h 1, :amount 60}
-   {:dispatch [::sablier-start-stream--success on-success]
-    ;;::call-read-write-method [erc20-token-addr
-    ;;                          ["approve" sablier-contract-addr-rinkeby final-deposit]
-    ;;                          [::erc20-approve-sablier-deposit--success]
-    ;;                          on-fail
-    ;;                          erc-20-abi]
-    }))
+         end-time (calc-end-time start-time duration-h)]
+     (mk-fetch-abi-event
+      :sablier
+      [::fill-abi-and-call-read-write-method
+       [sablier-contract-addr-rinkeby ;; HACK: Hardcoded network addr
+        ["createStream" recipient-addr final-deposit erc20-token-addr start-time end-time]
+        [::sablier-start-stream--success on-success]
+        on-fail]]
+      on-fail))))
 
 (re-frame/reg-event-fx
  ::reset-stream-flow

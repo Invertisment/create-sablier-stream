@@ -1,5 +1,6 @@
 (ns multis-task.util.validation
-  (:require [multis-task.util.bigdec :as bigdec]))
+  (:require [multis-task.util.bigdec :as bigdec]
+            ["ethers" :as ethers]))
 
 (defn- get-day-date [date]
   (js/Date. (subs (.toISOString date) 0 10)))
@@ -20,16 +21,21 @@
 
 (defn pos-str? [number-str]
   (try
-    (when-not (= 1 (.signum (bigdec/str->bigdec number-str)))
+    (when-not (= 1 (.signum (bigdec/->bigdec number-str)))
       "The number should be positive.")
     (catch js/Object e
       "Expected a number input.")))
+
+(defn address? [maybe-addr-str]
+  (when-not (.isAddress ethers/utils maybe-addr-str)
+    "Not a valid address."))
 
 (defn to-validation-fn [key]
   (case key
     :date-at-least-today? date-at-least-today?
     :pos? pos-str?
     :required required
+    :address? address?
     ))
 
 (defn date-time-after-now? [date-str time-str]
@@ -39,13 +45,17 @@
       (when (> now input)
         "Expected future Date and Time."))))
 
+(defn to-seconds [duration-h]
+  (.multiply
+   (bigdec/->bigdec duration-h)
+   (bigdec/->bigdec (* 60 60))))
+#_(str (to-seconds "2"))
+
 (defn amount-multiple-of-hour-seconds? [amount decimals hours]
   (try
-    (let [amount (bigdec/str->bigdec amount decimals)
-          ten-pow-to-decimals (.pow (bigdec/str->bigdec "10") decimals)
-          seconds (-> (bigdec/str->bigdec hours)
-                      (.multiply (bigdec/str->bigdec "60"))
-                      (.multiply (bigdec/str->bigdec "60")))
+    (let [amount (bigdec/->bigdec amount decimals)
+          ten-pow-to-decimals (.pow (bigdec/->bigdec "10") decimals)
+          seconds (to-seconds hours)
           seconds-div (.movePointLeft seconds decimals)
           remainder (.remainder amount seconds-div)
           closest-match-bottom (.subtract amount remainder)

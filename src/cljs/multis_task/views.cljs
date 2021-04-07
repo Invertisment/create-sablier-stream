@@ -92,15 +92,21 @@
                               :multi-validation-field-paths [:_ [:erc20-token-decimals] [:duration-h]]
                               :multi-validation-fn :amount-multiple-of-hour-seconds?
                               :input-props {:disabled authorize-sablier-disabled}})
+        (form/field-with-err {:label "Final recipient"
+                              :type "text"
+                              :form-id :token-stream-form
+                              :field-path [:recipient-addr]
+                              :validation-fns [:required :address?]
+                              :input-props {:disabled authorize-sablier-disabled}})
         [:button
          {:on-click #(re-frame/dispatch [::form-events/revalidate-form
                                          :token-stream-form
                                          [::contracts/erc20-approve-to-sablier
-                                          [:notify-error "Amount approved for use in Sablier contract."]
+                                          [:notify-success "Approved. To activate the stream click on Stream activation."]
                                           [:notify-error]]])
           :disabled authorize-sablier-disabled}
          (let [token-name @(re-frame/subscribe [::subs/erc20-token-name])]
-           [:span "Authorize Sablier to use " token-name])]
+           [:span "Approve Sablier to use " token-name])]
         (when @(re-frame/subscribe [::subs/sablier-stream-activation-visible])
           [:div
            [:button
@@ -112,22 +118,28 @@
             [:span "Activate Sablier token stream"]]])]))])
 
 (defn preview-notifs [notif-type element-with-classes notifs]
-  [:div
-   (map
-    (fn [notif]
-      ^{:key notif} [element-with-classes notif (dispatch-button "Clear" [:clear-notif notif-type notif])])
-    notifs)])
+  (map
+   (fn [notif]
+     ^{:key notif} [element-with-classes notif (dispatch-button "Clear" [:clear-notif notif-type notif])])
+   notifs))
 
-(defn ui-notifs [to-route btn-name]
-  (when-let [errors (seq @(re-frame/subscribe [::subs/ui-errors]))]
-    (preview-notifs :ui-errors :div.space-between.error errors))
-  (when-let [texts (seq @(re-frame/subscribe [::subs/ui-successes]))]
-    (preview-notifs :ui-successes :div.space-between.success texts)))
+(defn ui-notifs []
+  [:div
+   (concat
+    (preview-notifs
+     :ui-errors :div.space-between.error @(re-frame/subscribe [::subs/ui-errors]))
+    (preview-notifs
+     :ui-successes :div.space-between.success @(re-frame/subscribe [::subs/ui-successes])))])
 
 (defn metamask-info []
   [:div
    [chosen-network-name]
    [chosen-acc-addr]])
+
+(defn debug-helpers []
+  [:div
+   (dispatch-button "Print ERC20 ABI" [::contracts/fetch-abi :erc20 [:console-log] [:println]])
+   [:div "FAU addr: 0xfab46e002bbf0b4509813474841e0716e6730136"]])
 
 (defn page [title & body]
   [:div
@@ -146,12 +158,11 @@
                               "Create token stream"
                               [metamask-info]
                               [token-stream-initiation]
-                              (to :home "Go to Home")
-                              #_[:div "FAU addr: 0xfab46e002bbf0b4509813474841e0716e6730136"])
+                              #_[debug-helpers])
       :stream-creation-success (page
                                 "Stream created"
                                 [metamask-info]
-                                [:p.success "Stream created. Head to Etherscan and enter your account details."]
+                                [:p.success "Stream created. Head to Etherscan and enter your account address."]
                                 (dispatch-button "Create a new payment stream" [::contracts/reset-stream-flow [::events/navigate :initiate-token-stream]]))
       [:div
        [:h1 "Not found"]

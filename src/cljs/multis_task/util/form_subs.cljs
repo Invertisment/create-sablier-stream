@@ -42,6 +42,11 @@
    (get-in db [:field-errors :token-stream-form :amount])))
 
 (re-frame/reg-sub
+ ::field-error_token-stream-form_recipient-addr
+ (fn [db]
+   (get-in db [:field-errors :token-stream-form :recipient-addr])))
+
+(re-frame/reg-sub
  ::field-error_token-stream-form_multiple-validation
  (fn [db]
    (get-in db [:field-errors :token-stream-form :multiple-validation])))
@@ -65,3 +70,8 @@
  (field-key->sub-id :token-stream-form [:amount])
  (fn [db]
    (form-utils/db-get db :token-stream-form [:amount])))
+
+(re-frame/reg-sub
+ (field-key->sub-id :token-stream-form [:recipient-addr])
+ (fn [db]
+   (form-utils/db-get db :token-stream-form [:recipient-addr])))
