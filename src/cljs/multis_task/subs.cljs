@@ -86,3 +86,10 @@
    [(re-frame/subscribe [::sablier-stream-activation-visible])])
  (fn [[sablier-stream-activation-visible]]
    sablier-stream-activation-visible))
+
+(re-frame/reg-sub
+ ::erc20-token-addr-input-disabled
+ (fn [query-v]
+   [(re-frame/subscribe [::sablier-stream-activation-visible])])
+ (fn [[sablier-stream-activation-visible]]
+   sablier-stream-activation-visible))

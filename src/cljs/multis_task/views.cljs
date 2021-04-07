@@ -47,7 +47,8 @@
                  :on-change #(re-frame/dispatch [::contracts/fetch-erc20-details
                                                  (form/->target->value %)
                                                  [::form-events/on-field-ok :token-stream-form [:erc20-token-addr] [:erc20-token-addr] (form/->target->value %)]
-                                                 [::form-events/on-field-error :token-stream-form [:erc20-token-addr] [:erc20-token-addr] (form/->target->value %)]])}])
+                                                 [::form-events/on-field-error :token-stream-form [:erc20-token-addr] [:erc20-token-addr] (form/->target->value %)]])
+                 :disabled @(re-frame/subscribe [::subs/erc20-token-addr-input-disabled])}])
    (form/field-error :token-stream-form [:erc20-token-addr])
    (form/input "ERC20 Token name"
                (when-let [token-name @(re-frame/subscribe [::subs/erc20-token-name])]
@@ -162,7 +163,7 @@
       :stream-creation-success (page
                                 "Stream created"
                                 [metamask-info]
-                                [:p.success "Stream created. Head to Etherscan and enter your account address."]
+                                [:p.success "Stream created. Head to Etherscan or Metamask and see your two most recent transactions."]
                                 (dispatch-button "Create a new payment stream" [::contracts/reset-stream-flow [::events/navigate :initiate-token-stream]]))
       [:div
        [:h1 "Not found"]
