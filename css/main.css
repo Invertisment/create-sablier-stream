@@ -1,0 +1,72 @@
+
+body {
+    max-width: 50em;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 2%;
+    padding-right: 2%;
+}
+
+button {
+    margin-bottom: 5px;
+    margin-top: 5px;
+}
+
+.portal-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+}
+
+.portal {
+    background: #00000033;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.space-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.success {
+    background: #00ff0044;
+    padding: 2px;
+}
+
+.error {
+    background: #ff000044;
+    padding: 2px;
+}
+
+.field-error {
+    background: #ff000044;
+    padding: 2px;
+    text-align: end;
+}
+
+.input {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.input > :nth-child(2) {
+    margin-left: 20px;
+    display: flex;
+    justify-content: flex-end;
+    line-height: 32px;
+}
+
+.input > input {
+    text-align: right;
+    width: 400px;
+}
